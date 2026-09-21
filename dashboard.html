@@ -132,29 +132,30 @@
     overflow: auto;
     max-height: 65vh;
   }
-  table.data-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.data-table { border-collapse: collapse; width: auto; font-size: 15px; }
   table.data-table th, table.data-table td {
-    padding: 8px 12px;
+    padding: 7px 8px;
     text-align: left;
     white-space: nowrap;
     border-bottom: 1px solid var(--line);
   }
   table.data-table th {
     position: sticky; top: 0;
-    background: var(--surface);
+    background: var(--bg);
     color: var(--ink-soft);
-    font-size: 11.5px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 500;
     border-bottom: 1px solid var(--line);
     z-index: 1;
   }
   table.data-table tbody tr:last-child td { border-bottom: none; }
-  table.data-table td.num, table.data-table th.num { text-align: right; }
-  .cell-present { color: var(--present); font-weight: 600; }
-  .cell-absent { color: var(--absent); font-weight: 600; }
-  .cell-done { color: var(--present); font-weight: 600; }
+  table.data-table td.num, table.data-table th.num { text-align: center; }
+  table.data-table tr.done { background: var(--primary-soft); }
+  .cell-present { color: var(--present); font-weight: 700; }
+  .cell-absent { color: var(--absent); font-weight: 700; }
+  .cell-done { color: var(--primary); font-weight: 700; }
   .cell-notdone { color: var(--ink-soft); }
-  .cell-mismatch { color: var(--absent); font-weight: 600; }
+  .cell-mismatch { color: var(--absent); font-weight: 700; }
   .cell-dim { color: var(--ink-soft); font-style: italic; }
 
   .download-btn {
@@ -200,7 +201,7 @@
 
 <div class="sheet-panel" id="sheetPanel"></div>
 
-<div class="demo-badge">GAS 백엔드 연동됨</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v4</div>
 
 <script>
 /* =====================================================================
@@ -247,6 +248,13 @@ function supervisorCount(venueName) {
   return null; // 백엔드에 감독관 조회 API가 아직 없음 (로그인 조회 전용)
 }
 
+// "3층 1고사실" -> "3층 · 1고사실" 처럼 층수와 고사실을 시각적으로 구분
+function formatRoomLabel(name) {
+  const idx = name.indexOf(" ");
+  if (idx === -1) return name;
+  return name.slice(0, idx) + " · " + name.slice(idx + 1);
+}
+
 function esc(v) {
   return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -277,7 +285,7 @@ function renderVenueSummarySheet() {
     const vs = computeVenueStats(venue);
     const doneAll = vs.doneRooms === vs.totalRooms;
     rows += `
-      <tr>
+      <tr class="${doneAll ? "done" : ""}">
         <td>${esc(venueName)}</td>
         <td class="num">${vs.total}</td>
         <td class="num">${vs.doneRooms}/${vs.totalRooms}</td>
@@ -314,9 +322,9 @@ function renderRoomStatusSheet() {
       const rs = computeRoomStats(room);
       const matched = rs.pending === 0;
       rows += `
-        <tr>
+        <tr class="${room.completed ? "done" : ""}">
           <td>${esc(venueName)}</td>
-          <td>${esc(room.name)}</td>
+          <td>${formatRoomLabel(room.name)}</td>
           <td class="num">${rs.capacity}</td>
           <td class="num cell-present">${rs.present}</td>
           <td class="num cell-absent">${rs.absent}</td>
@@ -372,9 +380,9 @@ function renderFullStatusSheet() {
   entries.forEach(e => {
     const cls = e.status === "응시" ? "cell-present" : (e.status === "결시" ? "cell-absent" : "cell-mismatch");
     rows += `
-      <tr>
+      <tr class="${e.registered === "등록완료" ? "done" : ""}">
         <td>${esc(e.examNo)}</td>
-        <td>${esc(e.room)}</td>
+        <td>${formatRoomLabel(e.room)}</td>
         <td class="${cls}">${esc(e.status)}</td>
         <td>${esc(e.venue)}</td>
         <td class="${e.registered === "등록완료" ? "cell-done" : "cell-notdone"}">${esc(e.registered)}</td>
@@ -403,8 +411,9 @@ function renderRegistrySheet() {
   let rows = "";
   Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
     const vs = computeVenueStats(venue);
+    const doneAll = vs.doneRooms === vs.totalRooms;
     rows += `
-      <tr>
+      <tr class="${doneAll ? "done" : ""}">
         <td>${esc(venueName)}</td>
         <td class="num cell-dim">-</td>
         <td class="num">${vs.totalRooms}</td>
