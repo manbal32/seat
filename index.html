@@ -15,6 +15,9 @@
     --primary: #2C5282;
     --primary-ink: #FFFFFF;
     --primary-soft: #E9F0FA;
+    --accent: #7C4FD6;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #F0EAFB;
     --present: #2F8F5B;
     --present-bg: #E7F5EC;
     --absent: #C0524B;
@@ -39,6 +42,9 @@
       --primary: #5B8FCC;
       --primary-ink: #10131A;
       --primary-soft: #1F2D42;
+      --accent: #9B7BE0;
+      --accent-ink: #10131A;
+      --accent-soft: #2A2240;
       --present: #4CAE7C;
       --present-bg: #17301F;
       --absent: #D9776E;
@@ -58,6 +64,9 @@
     --primary: #5B8FCC;
     --primary-ink: #10131A;
     --primary-soft: #1F2D42;
+    --accent: #9B7BE0;
+    --accent-ink: #10131A;
+    --accent-soft: #2A2240;
     --present: #4CAE7C;
     --present-bg: #17301F;
     --absent: #D9776E;
@@ -218,7 +227,7 @@
   }
   table.data-table { border-collapse: collapse; width: auto; font-size: 15px; }
   table.data-table th, table.data-table td {
-    padding: 8px 10px;
+    padding: 7px 8px;
     text-align: left;
     white-space: nowrap;
     border-bottom: 1px solid var(--line);
@@ -297,19 +306,18 @@
 
   .room-panel { padding: 4px 20px 40px; }
   .room-head { margin-bottom: 16px; }
-  .room-head h2 { font-size: 16px; margin: 0 0 6px; }
-  .room-head-stats-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .room-head-stats { font-size: 16px; font-weight: 600; color: var(--ink-soft); }
+  .room-head-title-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .room-head h2 { font-size: 16px; margin: 0; }
+  .room-head-stats { font-size: 16px; font-weight: 600; color: var(--ink-soft); margin-top: 6px; }
   .room-head-stats b.present { color: var(--present); }
   .room-head-stats b.absent { color: var(--absent); }
-  .room-head-right { display: flex; align-items: center; gap: 10px; }
 
   .submit-btn {
     padding: 8px 16px;
     border-radius: 8px;
-    border: 1px solid var(--present);
-    background: var(--present-bg);
-    color: var(--present);
+    border: 1px solid var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -319,9 +327,9 @@
     cursor: not-allowed;
   }
   .submit-btn.done {
-    background: var(--present);
-    color: var(--primary-ink);
-    border-color: var(--present);
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
   }
   .submit-warning {
     font-size: 11.5px;
@@ -562,10 +570,12 @@ function renderReviewTable() {
   const statusClass = { present: "cell-present", absent: "cell-absent" };
   let rowsHtml = "";
   entries.forEach(e => {
+    const { floor, room: roomLabel } = splitRoomName(e.room);
     rowsHtml += `
       <tr>
         <td>${e.examNo}</td>
-        <td>${formatRoomLabel(e.room)}</td>
+        <td>${floor}</td>
+        <td>${roomLabel}</td>
         <td class="num ${statusClass[e.status]}">${statusText[e.status]}</td>
         <td class="${e.completed ? "cell-done" : "cell-notdone"}">${e.completed ? "등록완료" : "미등록"}</td>
       </tr>
@@ -574,7 +584,7 @@ function renderReviewTable() {
 
   wrap.innerHTML = `
     <table class="data-table">
-      <thead><tr><th>수험번호</th><th>고사실</th><th class="num">응결시</th><th>등록상태</th></tr></thead>
+      <thead><tr><th>수험번호</th><th>층</th><th>고사실</th><th class="num">응결시</th><th>등록상태</th></tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
   `;
@@ -616,6 +626,13 @@ function formatRoomLabel(name) {
   return name.slice(0, idx) + " · " + name.slice(idx + 1);
 }
 
+// "3층 1고사실" -> { floor: "3층", room: "1고사실" } (표에서 열을 따로 나눌 때 사용)
+function splitRoomName(name) {
+  const idx = name.indexOf(" ");
+  if (idx === -1) return { floor: "", room: name };
+  return { floor: name.slice(0, idx), room: name.slice(idx + 1) };
+}
+
 function effectiveStatus(seat) {
   return seat.status === "pending" ? "present" : seat.status;
 }
@@ -651,11 +668,11 @@ function renderRoom() {
 
   panel.innerHTML = `
     <div class="room-head">
-      <h2>${formatRoomLabel(room.name)}</h2>
-      <div class="room-head-stats-row">
-        <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
-        <div class="room-head-right">${submitHtml}</div>
+      <div class="room-head-title-row">
+        <h2>${formatRoomLabel(room.name)}</h2>
+        ${submitHtml}
       </div>
+      <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
     </div>
     <div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, 1fr); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div>
     <div class="legend">
@@ -719,9 +736,11 @@ function renderRoomOverview() {
       if (effectiveStatus(s) === "absent") absent++;
       else present++;
     });
+    const { floor, room: roomLabel } = splitRoomName(room.name);
     rowsHtml += `
       <tr class="clickable${idx === currentRoomIndex ? " active" : ""}${room.completed ? " done" : ""}" data-idx="${idx}">
-        <td class="rname">${formatRoomLabel(room.name)}</td>
+        <td>${floor}</td>
+        <td class="rname">${roomLabel}</td>
         <td class="num">${capacity}</td>
         <td class="num cell-present">${present}</td>
         <td class="num cell-absent">${absent}</td>
@@ -733,7 +752,7 @@ function renderRoomOverview() {
   wrap.innerHTML = `
     <table class="data-table">
       <thead><tr>
-        <th>고사실</th><th class="num">정원</th><th class="num">응시</th><th class="num">결시</th><th>등록상태</th>
+        <th>층</th><th>고사실</th><th class="num">정원</th><th class="num">응시</th><th class="num">결시</th><th>등록상태</th>
       </tr></thead>
       <tbody>${rowsHtml}</tbody>
     </table>
