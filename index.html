@@ -280,29 +280,21 @@
     font-size: 13px;
   }
 
-  .room-tabs {
-    display: flex;
-    gap: 8px;
-    padding: 0 20px 14px;
-    overflow-x: auto;
-  }
-  .room-tab {
-    flex: none;
-    padding: 8px 16px;
-    border-radius: 999px;
-    border: 1px solid var(--line);
+  .room-select-wrap { padding: 0 20px 14px; }
+  .room-select {
+    width: 100%;
+    max-width: 420px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1.5px solid var(--line);
     background: var(--surface);
-    color: var(--ink-soft);
-    font-size: 13.5px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .room-tab.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--primary-ink);
+    color: var(--ink);
+    font-size: 15px;
     font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
   }
+  .room-select:focus { outline: none; border-color: var(--primary); }
 
   .room-panel { padding: 4px 20px 40px; }
   .room-head { margin-bottom: 16px; }
@@ -457,7 +449,7 @@
   </div>
 
   <div id="inputView">
-    <div class="room-tabs" id="roomTabs"></div>
+    <div class="room-select-wrap"><select class="room-select" id="roomSelect"></select></div>
     <div class="room-panel" id="roomPanel"></div>
   </div>
 
@@ -470,7 +462,7 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v14</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v15</div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
@@ -620,15 +612,22 @@ function getRooms() {
 
 function renderRoomTabs() {
   const rooms = getRooms();
-  const wrap = document.getElementById("roomTabs");
-  wrap.innerHTML = "";
+  const select = document.getElementById("roomSelect");
+  select.innerHTML = "";
   rooms.forEach((room, idx) => {
-    const btn = document.createElement("button");
-    btn.className = "room-tab" + (idx === currentRoomIndex ? " active" : "");
-    btn.textContent = formatRoomLabel(room.name);
-    btn.onclick = () => { currentRoomIndex = idx; renderRoomTabs(); renderRoom(); renderRoomOverview(); };
-    wrap.appendChild(btn);
+    const opt = document.createElement("option");
+    opt.value = idx;
+    const mark = room.completed ? "✓ " : "";
+    const status = room.completed ? "완료" : "미완료";
+    opt.textContent = `${mark}${formatRoomLabel(room.name)} — ${status}`;
+    if (idx === currentRoomIndex) opt.selected = true;
+    select.appendChild(opt);
   });
+  select.onchange = () => {
+    currentRoomIndex = parseInt(select.value, 10);
+    renderRoom();
+    renderRoomOverview();
+  };
 }
 
 // 아직 손대지 않은 좌석(pending)은 기본적으로 "응시"로 간주합니다.
@@ -708,6 +707,7 @@ function renderRoom() {
     }
     room.completed = !room.completed;
     renderRoom();
+    renderRoomTabs();
     renderRoomOverview();
     syncRoomCompleted(session.venue, room.room, room.completed);
   };
