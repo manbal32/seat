@@ -398,9 +398,44 @@
     border-radius: 8px;
     z-index: 20;
   }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+    z-index: 30;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    max-width: calc(100vw - 40px);
+    text-align: center;
+    cursor: pointer;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+  }
+  .toast .toast-sub {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: .85;
+    margin-top: 4px;
+  }
 </style>
 </head>
 <body>
+
+<div class="toast" id="toast"></div>
 
 <!-- ============ 로그인 화면 ============ -->
 <div class="login-screen" id="loginScreen">
@@ -462,7 +497,7 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v15</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v16</div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
@@ -633,6 +668,46 @@ function renderRoomTabs() {
 // 아직 손대지 않은 좌석(pending)은 기본적으로 "응시"로 간주합니다.
 // 감독관은 실제로 결시한 소수만 클릭해서 표시하면 됩니다.
 // "3층 1고사실" -> "3층 · 1고사실" 처럼 층수와 고사실을 시각적으로 구분
+let toastTimer = null;
+function showToast(html, onClick) {
+  const el = document.getElementById("toast");
+  el.innerHTML = html;
+  el.onclick = onClick || null;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 4500);
+}
+
+function announceNextRoom(completedRoom) {
+  const rooms = getRooms();
+  const completedLabel = formatRoomLabel(completedRoom.name);
+
+  // 완료한 고사실 다음 순서부터, 없으면 처음부터 한 바퀴 돌면서 미완료 고사실 탐색
+  const idx = rooms.indexOf(completedRoom);
+  let next = null;
+  for (let i = 1; i <= rooms.length; i++) {
+    const cand = rooms[(idx + i) % rooms.length];
+    if (!cand.completed) { next = cand; break; }
+  }
+
+  if (!next) {
+    showToast(`${completedLabel} 완료! <span class="toast-sub">모든 고사실 등록이 완료되었습니다 🎉</span>`);
+    return;
+  }
+
+  const nextLabel = formatRoomLabel(next.name);
+  showToast(
+    `${completedLabel} 완료! <span class="toast-sub">다음: ${nextLabel} — 눌러서 이동</span>`,
+    () => {
+      currentRoomIndex = rooms.indexOf(next);
+      renderRoomTabs();
+      renderRoom();
+      renderRoomOverview();
+      document.getElementById("toast").classList.remove("show");
+    }
+  );
+}
+
 function formatRoomLabel(name) {
   const idx = name.indexOf(" ");
   if (idx === -1) return name;
@@ -696,7 +771,8 @@ function renderRoom() {
   `;
 
   document.getElementById("submitBtn").onclick = () => {
-    if (!room.completed) {
+    const wasCompleting = !room.completed;
+    if (wasCompleting) {
       // 아직 손 안 댄(pending) 좌석은 이 시점에 전부 "응시"로 확정해서 서버에도 반영
       room.seats.forEach(seat => {
         if (seat.status === "pending") {
@@ -710,6 +786,8 @@ function renderRoom() {
     renderRoomTabs();
     renderRoomOverview();
     syncRoomCompleted(session.venue, room.room, room.completed);
+
+    if (wasCompleting) announceNextRoom(room);
   };
 
   const grid = document.getElementById("seatGrid");
