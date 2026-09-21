@@ -216,9 +216,9 @@
     overflow: auto;
     max-height: 78vh;
   }
-  table.data-table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  table.data-table { border-collapse: collapse; width: auto; font-size: 15px; }
   table.data-table th, table.data-table td {
-    padding: 9px 14px;
+    padding: 8px 10px;
     text-align: left;
     white-space: nowrap;
     border-bottom: 1px solid var(--line);
@@ -297,9 +297,9 @@
 
   .room-panel { padding: 4px 20px 40px; }
   .room-head { margin-bottom: 16px; }
-  .room-head-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-  .room-head h2 { font-size: 16px; margin: 0; }
-  .room-head-stats { font-size: 16px; font-weight: 600; color: var(--ink-soft); margin-top: 6px; }
+  .room-head h2 { font-size: 16px; margin: 0 0 6px; }
+  .room-head-stats-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .room-head-stats { font-size: 16px; font-weight: 600; color: var(--ink-soft); }
   .room-head-stats b.present { color: var(--present); }
   .room-head-stats b.absent { color: var(--absent); }
   .room-head-right { display: flex; align-items: center; gap: 10px; }
@@ -565,7 +565,7 @@ function renderReviewTable() {
     rowsHtml += `
       <tr>
         <td>${e.examNo}</td>
-        <td>${e.room}</td>
+        <td>${formatRoomLabel(e.room)}</td>
         <td class="num ${statusClass[e.status]}">${statusText[e.status]}</td>
         <td class="${e.completed ? "cell-done" : "cell-notdone"}">${e.completed ? "등록완료" : "미등록"}</td>
       </tr>
@@ -601,7 +601,7 @@ function renderRoomTabs() {
   rooms.forEach((room, idx) => {
     const btn = document.createElement("button");
     btn.className = "room-tab" + (idx === currentRoomIndex ? " active" : "");
-    btn.textContent = room.name;
+    btn.textContent = formatRoomLabel(room.name);
     btn.onclick = () => { currentRoomIndex = idx; renderRoomTabs(); renderRoom(); renderRoomOverview(); };
     wrap.appendChild(btn);
   });
@@ -609,6 +609,13 @@ function renderRoomTabs() {
 
 // 아직 손대지 않은 좌석(pending)은 기본적으로 "응시"로 간주합니다.
 // 감독관은 실제로 결시한 소수만 클릭해서 표시하면 됩니다.
+// "3층 1고사실" -> "3층 · 1고사실" 처럼 층수와 고사실을 시각적으로 구분
+function formatRoomLabel(name) {
+  const idx = name.indexOf(" ");
+  if (idx === -1) return name;
+  return name.slice(0, idx) + " · " + name.slice(idx + 1);
+}
+
 function effectiveStatus(seat) {
   return seat.status === "pending" ? "present" : seat.status;
 }
@@ -644,11 +651,11 @@ function renderRoom() {
 
   panel.innerHTML = `
     <div class="room-head">
-      <div class="room-head-title-row">
-        <h2>${room.name}</h2>
+      <h2>${formatRoomLabel(room.name)}</h2>
+      <div class="room-head-stats-row">
+        <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
         <div class="room-head-right">${submitHtml}</div>
       </div>
-      <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
     </div>
     <div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, 1fr); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div>
     <div class="legend">
@@ -714,7 +721,7 @@ function renderRoomOverview() {
     });
     rowsHtml += `
       <tr class="clickable${idx === currentRoomIndex ? " active" : ""}${room.completed ? " done" : ""}" data-idx="${idx}">
-        <td class="rname">${room.name}</td>
+        <td class="rname">${formatRoomLabel(room.name)}</td>
         <td class="num">${capacity}</td>
         <td class="num cell-present">${present}</td>
         <td class="num cell-absent">${absent}</td>
