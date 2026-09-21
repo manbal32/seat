@@ -209,32 +209,33 @@
   .summary-chip.absent .num { color: var(--absent); }
 
   .room-overview {
-    margin: 0 20px 16px;
+    margin: 0 20px 40px;
     border: 1px solid var(--line);
     border-radius: 12px;
     background: var(--surface);
-    max-height: 220px;
+    max-height: 78vh;
     overflow-y: auto;
   }
   .room-overview-head {
     position: sticky;
     top: 0;
     display: grid;
-    grid-template-columns: 1.3fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr;
-    gap: 4px;
-    padding: 8px 14px;
-    font-size: 11px;
+    grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr 1fr;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--ink-soft);
     background: var(--surface);
     border-bottom: 1px solid var(--line);
   }
   .room-overview-row {
     display: grid;
-    grid-template-columns: 1.3fr 0.6fr 0.6fr 0.6fr 0.6fr 0.6fr;
-    gap: 4px;
+    grid-template-columns: 2fr 0.8fr 0.8fr 0.8fr 1fr;
+    gap: 8px;
     align-items: center;
-    padding: 7px 14px;
-    font-size: 13px;
+    padding: 14px 20px;
+    font-size: 17px;
     cursor: pointer;
     border-bottom: 1px solid var(--line);
   }
@@ -242,13 +243,12 @@
   .room-overview-row:hover { background: var(--primary-soft); }
   .room-overview-row.active { background: var(--primary-soft); font-weight: 600; }
   .room-overview-row.done { background: var(--present-bg); }
-  .room-overview-row .rname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .room-overview-row .rnum { text-align: center; }
+  .room-overview-row .rname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+  .room-overview-row .rnum { text-align: center; font-weight: 700; }
   .room-overview-row .rnum.present { color: var(--present); }
   .room-overview-row .rnum.absent { color: var(--absent); }
-  .room-overview-row .rnum.pending { color: var(--ink-soft); }
-  .room-overview-row .rdone { text-align: center; color: var(--present); font-weight: 700; }
-  .room-overview-row .rdone.no { color: var(--line); }
+  .room-overview-row .rdone { text-align: center; color: var(--present); font-weight: 700; font-size: 14px; }
+  .room-overview-row .rdone.no { color: var(--ink-soft); font-weight: 500; }
 
   .view-tabs {
     display: flex;
@@ -379,13 +379,14 @@
 
   .seat-grid {
     display: grid;
-    gap: 8px;
-    max-width: 560px;
+    gap: 10px;
+    max-width: 720px;
   }
   .seat {
     aspect-ratio: 1 / 0.82;
-    border-radius: 8px;
-    border: 1.5px solid var(--line);
+    min-height: 64px;
+    border-radius: 10px;
+    border: 2px solid var(--line);
     background: var(--empty-bg);
     color: var(--ink-soft);
     display: flex;
@@ -394,12 +395,13 @@
     justify-content: center;
     cursor: pointer;
     user-select: none;
-    padding: 4px 2px;
+    padding: 6px 4px;
     transition: transform .08s ease;
   }
   .seat:active { transform: scale(0.95); }
-  .seat .seat-no { font-size: 10.5px; opacity: .7; }
-  .seat .seat-exam { font-size: 11px; font-weight: 600; margin-top: 2px; }
+  .seat .seat-no { font-size: 13px; opacity: .7; }
+  .seat .seat-exam { font-size: 17px; font-weight: 700; margin-top: 3px; }
+  .seat .seat-status-label { font-size: 13px; font-weight: 600; margin-top: 2px; }
   .seat.state-empty { cursor: default; opacity: .55; }
   .seat.state-present { background: var(--present-bg); border-color: var(--present); color: var(--present); }
   .seat.state-absent { background: var(--absent-bg); border-color: var(--absent); color: var(--absent); }
@@ -468,14 +470,18 @@
   <div class="summary-bar" id="summaryBar"></div>
 
   <div class="view-tabs">
-    <button class="view-tab active" id="viewTabInput">좌석 입력</button>
+    <button class="view-tab active" id="viewTabInput">좌석입력</button>
+    <button class="view-tab" id="viewTabRooms">고사실별 현황</button>
     <button class="view-tab" id="viewTabReview">전체 확인</button>
   </div>
 
   <div id="inputView">
-    <div class="room-overview" id="roomOverview"></div>
     <div class="room-tabs" id="roomTabs"></div>
     <div class="room-panel" id="roomPanel"></div>
+  </div>
+
+  <div id="roomsView" style="display: none;">
+    <div class="room-overview" id="roomOverview"></div>
   </div>
 
   <div id="reviewView" style="display: none;">
@@ -567,9 +573,12 @@ function enterApp(sup) {
 function setViewMode(mode) {
   viewMode = mode;
   document.getElementById("inputView").style.display = mode === "input" ? "" : "none";
+  document.getElementById("roomsView").style.display = mode === "rooms" ? "" : "none";
   document.getElementById("reviewView").style.display = mode === "review" ? "" : "none";
   document.getElementById("viewTabInput").classList.toggle("active", mode === "input");
+  document.getElementById("viewTabRooms").classList.toggle("active", mode === "rooms");
   document.getElementById("viewTabReview").classList.toggle("active", mode === "review");
+  if (mode === "rooms") renderRoomOverview();
   if (mode === "review") renderReviewTable();
 }
 
@@ -581,7 +590,7 @@ function renderReviewTable() {
   rooms.forEach(room => {
     room.seats.forEach(seat => {
       if (seat.status === "empty") return;
-      entries.push({ examNo: seat.examNo, room: room.name, status: seat.status, completed: room.completed });
+      entries.push({ examNo: seat.examNo, room: room.name, status: effectiveStatus(seat), completed: room.completed });
     });
   });
 
@@ -590,7 +599,7 @@ function renderReviewTable() {
     return;
   }
 
-  const statusText = { present: "응시", absent: "결시", pending: "미정" };
+  const statusText = { present: "응시", absent: "결시" };
   let rowsHtml = "";
   entries.forEach(e => {
     rowsHtml += `
@@ -638,11 +647,14 @@ function renderRoomTabs() {
   });
 }
 
-function cycleStatus(status) {
-  if (status === "pending") return "present";
-  if (status === "present") return "absent";
-  if (status === "absent") return "pending";
-  return status; // empty는 변경 불가
+// 아직 손대지 않은 좌석(pending)은 기본적으로 "응시"로 간주합니다.
+// 감독관은 실제로 결시한 소수만 클릭해서 표시하면 됩니다.
+function effectiveStatus(seat) {
+  return seat.status === "pending" ? "present" : seat.status;
+}
+
+function toggleStatus(seat) {
+  seat.status = effectiveStatus(seat) === "present" ? "absent" : "present";
 }
 
 function statusLabel(status) {
@@ -659,12 +671,10 @@ function renderRoom() {
   if (!room) { panel.innerHTML = ""; return; }
 
   const filledCount = room.seats.filter(s => s.status !== "empty").length;
-  const pendingCount = room.seats.filter(s => s.status === "pending").length;
 
   const submitHtml = room.completed
     ? `<span class="done-badge">&#10003; 등록완료</span><button class="submit-btn done" id="submitBtn">등록 취소</button>`
-    : `<button class="submit-btn" id="submitBtn" ${pendingCount > 0 ? "disabled" : ""}>고사실 등록완료</button>
-       ${pendingCount > 0 ? `<span class="submit-warning">처리 전 좌석 ${pendingCount}개 남음</span>` : ""}`;
+    : `<button class="submit-btn" id="submitBtn">고사실 등록완료</button>`;
 
   panel.innerHTML = `
     <div class="room-head">
@@ -676,7 +686,6 @@ function renderRoom() {
     </div>
     <div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, 1fr); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div>
     <div class="legend">
-      <div class="legend-item"><span class="legend-dot"></span>예정</div>
       <div class="legend-item"><span class="legend-dot present"></span>응시</div>
       <div class="legend-item"><span class="legend-dot absent"></span>결시</div>
       <div class="legend-item"><span class="legend-dot empty"></span>빈자리</div>
@@ -684,7 +693,15 @@ function renderRoom() {
   `;
 
   document.getElementById("submitBtn").onclick = () => {
-    if (!room.completed && pendingCount > 0) return; // 안전장치: 처리 전 좌석 있으면 등록완료 불가
+    if (!room.completed) {
+      // 아직 손 안 댄(pending) 좌석은 이 시점에 전부 "응시"로 확정해서 서버에도 반영
+      room.seats.forEach(seat => {
+        if (seat.status === "pending") {
+          seat.status = "present";
+          syncSeatStatus(session.venue, room.room, seat);
+        }
+      });
+    }
     room.completed = !room.completed;
     renderRoom();
     renderRoomOverview();
@@ -693,16 +710,17 @@ function renderRoom() {
 
   const grid = document.getElementById("seatGrid");
   room.seats.forEach((seat, i) => {
+    const disp = effectiveStatus(seat);
     const el = document.createElement("div");
-    el.className = "seat state-" + seat.status;
+    el.className = "seat state-" + disp;
     el.innerHTML = `
       <span class="seat-no">${seat.no}</span>
       <span class="seat-exam">${seat.examNo ? seat.examNo.slice(-4) : "빈자리"}</span>
-      <span class="seat-status-label">${statusLabel(seat.status)}</span>
+      <span class="seat-status-label">${statusLabel(disp)}</span>
     `;
-    if (seat.status !== "empty" && !room.completed) {
+    if (disp !== "empty" && !room.completed) {
       el.onclick = () => {
-        seat.status = cycleStatus(seat.status);
+        toggleStatus(seat);
         renderRoom();
         renderSummary();
         renderRoomOverview();
@@ -721,18 +739,17 @@ function renderRoomOverview() {
 
   let html = `
     <div class="room-overview-head">
-      <span>고사실</span><span class="rnum">정원</span><span class="rnum">응시</span><span class="rnum">결시</span><span class="rnum">처리전</span><span class="rnum">등록상태</span>
+      <span>고사실</span><span class="rnum">정원</span><span class="rnum">응시</span><span class="rnum">결시</span><span class="rnum">등록상태</span>
     </div>
   `;
 
   rooms.forEach((room, idx) => {
-    let present = 0, absent = 0, pending = 0, capacity = 0;
+    let present = 0, absent = 0, capacity = 0;
     room.seats.forEach(s => {
       if (s.status === "empty") return;
       capacity++;
-      if (s.status === "present") present++;
-      else if (s.status === "absent") absent++;
-      else pending++;
+      if (effectiveStatus(s) === "absent") absent++;
+      else present++;
     });
     html += `
       <div class="room-overview-row${idx === currentRoomIndex ? " active" : ""}${room.completed ? " done" : ""}" data-idx="${idx}">
@@ -740,8 +757,7 @@ function renderRoomOverview() {
         <span class="rnum">${capacity}</span>
         <span class="rnum present">${present}</span>
         <span class="rnum absent">${absent}</span>
-        <span class="rnum pending">${pending}</span>
-        <span class="rdone${room.completed ? "" : " no"}">${room.completed ? "&#10003;" : "&ndash;"}</span>
+        <span class="rdone${room.completed ? "" : " no"}">${room.completed ? "완료" : "미완료"}</span>
       </div>
     `;
   });
@@ -750,23 +766,22 @@ function renderRoomOverview() {
   wrap.querySelectorAll(".room-overview-row").forEach(row => {
     row.onclick = () => {
       currentRoomIndex = parseInt(row.dataset.idx, 10);
+      setViewMode("input");
       renderRoomTabs();
       renderRoom();
       renderRoomOverview();
-      row.scrollIntoView({ block: "nearest" });
     };
   });
 }
 
 function renderSummary() {
   const rooms = getRooms();
-  let total = 0, present = 0, absent = 0, pending = 0;
+  let total = 0, present = 0, absent = 0;
   rooms.forEach(r => r.seats.forEach(s => {
     if (s.status === "empty") return;
     total++;
-    if (s.status === "present") present++;
-    else if (s.status === "absent") absent++;
-    else pending++;
+    if (effectiveStatus(s) === "absent") absent++;
+    else present++;
   }));
   const doneRooms = rooms.filter(r => r.completed).length;
 
@@ -775,7 +790,6 @@ function renderSummary() {
     <div class="summary-chip"><div class="num">${total}</div><div class="label">전체 응시대상</div></div>
     <div class="summary-chip present"><div class="num">${present}</div><div class="label">응시</div></div>
     <div class="summary-chip absent"><div class="num">${absent}</div><div class="label">결시</div></div>
-    <div class="summary-chip"><div class="num">${pending}</div><div class="label">처리 전</div></div>
     <div class="summary-chip present"><div class="num">${doneRooms}/${rooms.length}</div><div class="label">고사실 등록완료</div></div>
   `;
 }
@@ -798,6 +812,7 @@ phoneInput.addEventListener("keydown", (e) => {
 loginBtn.addEventListener("click", attemptLogin);
 document.getElementById("logoutBtn").addEventListener("click", exitApp);
 document.getElementById("viewTabInput").addEventListener("click", () => setViewMode("input"));
+document.getElementById("viewTabRooms").addEventListener("click", () => setViewMode("rooms"));
 document.getElementById("viewTabReview").addEventListener("click", () => setViewMode("review"));
 
 let failCount = 0;
