@@ -378,6 +378,15 @@
   .seat.state-present { background: var(--present-bg); border-color: var(--present); color: var(--present); }
   .seat.state-absent { background: var(--absent-bg); border-color: var(--absent); color: var(--absent); }
 
+  /* 좁은 화면(모바일)에서는 칸 개수는 그대로 두고 칸/글자 크기만 줄여서 화면에 맞춤 */
+  @media (max-width: 480px) {
+    .seat-grid { gap: 6px; }
+    .seat { min-height: 52px; padding: 3px 2px; border-radius: 8px; border-width: 1.5px; }
+    .seat .seat-no { font-size: 9px; }
+    .seat .seat-exam { font-size: 10.5px; letter-spacing: -0.6px; margin-top: 2px; }
+    .seat .seat-status-label { font-size: 9px; margin-top: 1px; }
+  }
+
   .legend { display: flex; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
   .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
   .legend-dot { width: 11px; height: 11px; border-radius: 3px; border: 1.5px solid var(--line); }
@@ -461,7 +470,7 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v13</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v14</div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
@@ -679,7 +688,7 @@ function renderRoom() {
       </div>
       <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
     </div>
-    <div class="seat-grid-scroll"><div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, minmax(100px, 1fr)); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div></div>
+    <div class="seat-grid-scroll"><div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, 1fr); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div></div>
     <div class="legend">
       <div class="legend-item"><span class="legend-dot present"></span>응시</div>
       <div class="legend-item"><span class="legend-dot absent"></span>결시</div>
