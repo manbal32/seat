@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>고사장 통합 현황판</title>
+<style>
+  :root {
+    --bg: #F5F6F8;
+    --surface: #FFFFFF;
+    --ink: #1B2231;
+    --ink-soft: #5A6376;
+    --line: #E1E4EA;
+    --primary: #2C5282;
+    --primary-ink: #FFFFFF;
+    --primary-soft: #E9F0FA;
+    --present: #2F8F5B;
+    --present-bg: #E7F5EC;
+    --absent: #C0524B;
+    --absent-bg: #FBEBEA;
+    --font: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  :root:not([data-theme="light"]) {
+    @media (prefers-color-scheme: dark) {
+      --bg: #14161C; --surface: #1C1F28; --ink: #EDEFF3; --ink-soft: #9CA3B3;
+      --line: #2C3140; --primary: #5B8FCC; --primary-ink: #10131A; --primary-soft: #1F2D42;
+      --present: #4CAE7C; --present-bg: #17301F; --absent: #D9776E; --absent-bg: #34201E;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14161C; --surface: #1C1F28; --ink: #EDEFF3; --ink-soft: #9CA3B3;
+    --line: #2C3140; --primary: #5B8FCC; --primary-ink: #10131A; --primary-soft: #1F2D42;
+    --present: #4CAE7C; --present-bg: #17301F; --absent: #D9776E; --absent-bg: #34201E;
+  }
+  html, body { height: 100%; margin: 0; }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+
+  .topbar {
+    padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 10;
+  }
+  .topbar h1 { font-size: 17px; margin: 0 0 3px; font-weight: 700; }
+  .topbar .sub { font-size: 12.5px; color: var(--ink-soft); }
+  .internal-badge {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .refresh-btn {
+    margin-top: 8px;
+    margin-left: 8px;
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .refresh-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .refresh-note {
+    margin-left: 6px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .overall-bar {
+    display: flex; gap: 10px; padding: 14px 20px; overflow-x: auto;
+  }
+  .overall-chip {
+    flex: none; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px; min-width: 90px;
+  }
+  .overall-chip .num { font-size: 19px; font-weight: 700; line-height: 1.2; }
+  .overall-chip .label { font-size: 11px; color: var(--ink-soft); margin-top: 3px; }
+  .overall-chip.present .num { color: var(--present); }
+  .overall-chip.absent .num { color: var(--absent); }
+
+  .sheet-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 0 20px 12px;
+    overflow-x: auto;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+  }
+  .sheet-tab {
+    flex: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink-soft);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .sheet-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-ink);
+    font-weight: 600;
+  }
+
+  .sheet-panel { padding: 16px 20px 40px; }
+  .sheet-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .sheet-panel-head h2 { font-size: 15px; margin: 0; }
+  .sheet-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
+
+  .data-table-wrap {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+    overflow: auto;
+    max-height: 65vh;
+  }
+  table.data-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.data-table th, table.data-table td {
+    padding: 8px 12px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line);
+  }
+  table.data-table th {
+    position: sticky; top: 0;
+    background: var(--surface);
+    color: var(--ink-soft);
+    font-size: 11.5px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--line);
+    z-index: 1;
+  }
+  table.data-table tbody tr:last-child td { border-bottom: none; }
+  table.data-table td.num, table.data-table th.num { text-align: right; }
+  .cell-present { color: var(--present); font-weight: 600; }
+  .cell-absent { color: var(--absent); font-weight: 600; }
+  .cell-done { color: var(--present); font-weight: 600; }
+  .cell-notdone { color: var(--ink-soft); }
+  .cell-mismatch { color: var(--absent); font-weight: 600; }
+  .cell-dim { color: var(--ink-soft); font-style: italic; }
+
+  .download-btn {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border-radius: 8px;
+    border: 1px solid var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .download-btn.ready { display: inline-flex; }
+  .download-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+  .demo-badge {
+    position: fixed;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    right: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>고사장 통합 현황판</h1>
+  <div class="sub">전체 고사장 응시·결시 현황을 한 화면에서 확인합니다</div>
+  <span class="internal-badge">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
+  <button class="refresh-btn" id="refreshBtn">&#8635; 새로고침</button>
+  <span class="refresh-note" id="refreshNote"></span>
+  <div class="overall-bar" id="overallBar"></div>
+  <div class="sheet-tabs" id="sheetTabs"></div>
+</div>
+
+<div class="sheet-panel" id="sheetPanel"></div>
+
+<div class="demo-badge">GAS 백엔드 연동됨</div>
+
+<script>
+/* =====================================================================
+   샘플 데이터: 실제 googlesheetarray.py 파싱 결과로 교체 예정
+   실서비스 연동 시에는 이 데이터를 GAS 웹앱(doGet)에서 주기적으로
+   fetch해서 채우면, 감독관 페이지의 클릭 결과가 여기에도 실시간 반영됩니다.
+   ===================================================================== */
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
+let VENUE_DATA = {};
+
+async function loadVenueData() {
+  const res = await fetch(`${GAS_URL}?action=admin`);
+  if (!res.ok) throw new Error("network");
+  const data = await res.json();
+  Object.values(data).forEach(v => {
+    v.rooms.forEach(r => { if (typeof r.completed !== "boolean") r.completed = false; });
+  });
+  VENUE_DATA = data;
+}
+
+function computeRoomStats(room) {
+  let capacity = 0, present = 0, absent = 0, pending = 0;
+  room.seats.forEach(s => {
+    if (s.status === "empty") return;
+    capacity++;
+    if (s.status === "present") present++;
+    else if (s.status === "absent") absent++;
+    else pending++;
+  });
+  return { capacity, present, absent, pending };
+}
+
+function computeVenueStats(venue) {
+  let total = 0, present = 0, absent = 0, pending = 0;
+  const doneRooms = venue.rooms.filter(r => r.completed).length;
+  venue.rooms.forEach(r => {
+    const rs = computeRoomStats(r);
+    total += rs.capacity; present += rs.present; absent += rs.absent; pending += rs.pending;
+  });
+  return { total, present, absent, pending, doneRooms, totalRooms: venue.rooms.length };
+}
+
+function supervisorCount(venueName) {
+  return null; // 백엔드에 감독관 조회 API가 아직 없음 (로그인 조회 전용)
+}
+
+function esc(v) {
+  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ---------- 전체 요약 ---------- */
+function renderOverall() {
+  let total = 0, present = 0, absent = 0, pending = 0, venueCount = 0, doneRooms = 0, totalRooms = 0;
+  Object.values(VENUE_DATA).forEach(v => {
+    venueCount++;
+    const s = computeVenueStats(v);
+    total += s.total; present += s.present; absent += s.absent; pending += s.pending;
+    doneRooms += s.doneRooms; totalRooms += s.totalRooms;
+  });
+  document.getElementById("overallBar").innerHTML = `
+    <div class="overall-chip"><div class="num">${venueCount}</div><div class="label">전체 고사장</div></div>
+    <div class="overall-chip"><div class="num">${total}</div><div class="label">전체 응시대상</div></div>
+    <div class="overall-chip present"><div class="num">${present}</div><div class="label">응시</div></div>
+    <div class="overall-chip absent"><div class="num">${absent}</div><div class="label">결시</div></div>
+    <div class="overall-chip"><div class="num">${pending}</div><div class="label">처리 전</div></div>
+    <div class="overall-chip present"><div class="num">${doneRooms}/${totalRooms}</div><div class="label">고사실 등록완료</div></div>
+  `;
+}
+
+/* ---------- 탭: 고사장별집계 ---------- */
+function renderVenueSummarySheet() {
+  let rows = "";
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    const vs = computeVenueStats(venue);
+    const doneAll = vs.doneRooms === vs.totalRooms;
+    rows += `
+      <tr>
+        <td>${esc(venueName)}</td>
+        <td class="num">${vs.total}</td>
+        <td class="num">${vs.doneRooms}/${vs.totalRooms}</td>
+        <td class="num cell-present">${vs.present}</td>
+        <td class="num cell-absent">${vs.absent}</td>
+        <td class="${doneAll ? "cell-done" : "cell-notdone"}">${doneAll ? "완료" : "진행중"}</td>
+      </tr>
+    `;
+  });
+  return `
+    <div class="sheet-panel-head">
+      <div>
+        <h2>고사장별집계</h2>
+        <div class="sheet-note">고사장 단위 총원 · 고사실 등록완료 현황 · 응시/결시 · 완료여부</div>
+      </div>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>고사장</th><th class="num">총원</th><th class="num">고사실현황(완료/전체)</th>
+          <th class="num">응시</th><th class="num">결시</th><th>완료여부</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---------- 탭: 고사실현황 ---------- */
+function renderRoomStatusSheet() {
+  let rows = "";
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    venue.rooms.forEach(room => {
+      const rs = computeRoomStats(room);
+      const matched = rs.pending === 0;
+      rows += `
+        <tr>
+          <td>${esc(venueName)}</td>
+          <td>${esc(room.name)}</td>
+          <td class="num">${rs.capacity}</td>
+          <td class="num cell-present">${rs.present}</td>
+          <td class="num cell-absent">${rs.absent}</td>
+          <td class="${room.completed ? "cell-done" : "cell-notdone"}">${room.completed ? "완료" : "미완료"}</td>
+          <td class="${matched ? "cell-done" : "cell-mismatch"}">${matched ? "일치" : "불일치"}</td>
+        </tr>
+      `;
+    });
+  });
+  return `
+    <div class="sheet-panel-head">
+      <div>
+        <h2>고사실현황</h2>
+        <div class="sheet-note">고사실 단위 총원 · 응시/결시 · 등록상태 · 검증상태 (검증상태: 처리 전 좌석이 0개면 '일치')</div>
+      </div>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>고사장</th><th>고사실</th><th class="num">총원</th>
+          <th class="num">응시</th><th class="num">결시</th><th>등록상태</th><th>검증상태</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---------- 탭: 전체현황 ---------- */
+function buildFullRows() {
+  const statusLabel = { present: "응시", absent: "결시", pending: "미정" };
+  const out = [];
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    venue.rooms.forEach(room => {
+      room.seats.forEach(seat => {
+        if (seat.status === "empty") return;
+        out.push({
+          examNo: seat.examNo || "",
+          room: room.name,
+          status: statusLabel[seat.status] || seat.status,
+          venue: venueName,
+          registered: room.completed ? "등록완료" : "미등록"
+        });
+      });
+    });
+  });
+  return out;
+}
+
+function renderFullStatusSheet() {
+  const entries = buildFullRows();
+  let rows = "";
+  entries.forEach(e => {
+    const cls = e.status === "응시" ? "cell-present" : (e.status === "결시" ? "cell-absent" : "cell-mismatch");
+    rows += `
+      <tr>
+        <td>${esc(e.examNo)}</td>
+        <td>${esc(e.room)}</td>
+        <td class="${cls}">${esc(e.status)}</td>
+        <td>${esc(e.venue)}</td>
+        <td class="${e.registered === "등록완료" ? "cell-done" : "cell-notdone"}">${esc(e.registered)}</td>
+      </tr>
+    `;
+  });
+  return `
+    <div class="sheet-panel-head">
+      <div>
+        <h2>전체현황</h2>
+        <div class="sheet-note">수험번호 단위 전체 목록 (${entries.length.toLocaleString()}명, 빈자리 제외)</div>
+      </div>
+      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr><th>수험번호</th><th>고사실</th><th>응결시</th><th>고사장</th><th>등록상태</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---------- 탭: 관리대장 ---------- */
+function renderRegistrySheet() {
+  let rows = "";
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    const vs = computeVenueStats(venue);
+    rows += `
+      <tr>
+        <td>${esc(venueName)}</td>
+        <td class="num cell-dim">-</td>
+        <td class="num">${vs.totalRooms}</td>
+        <td class="num">${vs.doneRooms}</td>
+        <td class="cell-dim">-</td>
+        <td class="cell-dim">-</td>
+      </tr>
+    `;
+  });
+  return `
+    <div class="sheet-panel-head">
+      <div>
+        <h2>관리대장</h2>
+        <div class="sheet-note">등록 감독관 수 · 파일ID · URL은 아직 조회 API가 없어 비어 있습니다 (필요하면 GAS에 조회 기능을 추가할 수 있어요)</div>
+      </div>
+    </div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>고사장</th><th class="num">등록 감독관 수</th><th class="num">총 고사실수</th>
+          <th class="num">완료 고사실수</th><th>파일ID</th><th>URL</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+/* ---------- 탭 전환 ---------- */
+const SHEETS = [
+  { key: "venueSummary", label: "고사장별집계", render: renderVenueSummarySheet },
+  { key: "roomStatus", label: "고사실현황", render: renderRoomStatusSheet },
+  { key: "fullStatus", label: "전체현황", render: renderFullStatusSheet },
+  { key: "registry", label: "관리대장", render: renderRegistrySheet }
+];
+let currentSheet = "venueSummary";
+
+function renderTabs() {
+  const wrap = document.getElementById("sheetTabs");
+  wrap.innerHTML = "";
+  SHEETS.forEach(s => {
+    const btn = document.createElement("button");
+    btn.className = "sheet-tab" + (s.key === currentSheet ? " active" : "");
+    btn.textContent = s.label;
+    btn.onclick = () => { currentSheet = s.key; renderTabs(); renderPanel(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function renderPanel() {
+  const sheet = SHEETS.find(s => s.key === currentSheet);
+  document.getElementById("sheetPanel").innerHTML = sheet.render();
+  if (currentSheet === "fullStatus") initDownload();
+}
+
+async function boot() {
+  const note = document.getElementById("refreshNote");
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true;
+  note.textContent = "불러오는 중...";
+  try {
+    await loadVenueData();
+    renderOverall();
+    renderTabs();
+    renderPanel();
+    note.textContent = "마지막 갱신: " + new Date().toLocaleTimeString("ko-KR");
+  } catch (e) {
+    note.textContent = "불러오기 실패 - 새로고침 버튼을 눌러 다시 시도해 주세요.";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("refreshBtn").addEventListener("click", boot);
+boot();
+
+/* ---------- CSV 다운로드 (전체현황 탭 전용) ---------- */
+function buildCsv() {
+  const rows = [["수험번호", "고사실", "응결시", "고사장", "등록상태"]];
+  buildFullRows().forEach(e => rows.push([e.examNo, e.room, e.status, e.venue, e.registered]));
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  return "\uFEFF" + csv;
+}
+
+async function initDownload() {
+  const btn = document.getElementById("downloadBtn");
+  if (!btn) return;
+  if (!window.claude || typeof window.claude.use !== "function") return;
+  const downloads = await window.claude.use("downloads");
+  if (!downloads) return;
+
+  btn.classList.add("ready");
+  btn.onclick = async () => {
+    btn.disabled = true;
+    const original = btn.innerHTML;
+    try {
+      const csv = buildCsv();
+      const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      await downloads.save({ filename: `전체현황_${today}.csv`, data: csv });
+    } catch (e) {
+      if (e && e.code !== "declined") {
+        btn.innerHTML = "다운로드 실패";
+        setTimeout(() => { btn.innerHTML = original; }, 2000);
+      }
+    } finally {
+      btn.disabled = false;
+      if (!btn.innerHTML.includes("실패")) btn.innerHTML = original;
+    }
+  };
+}
+</script>
+</body>
+</html>
