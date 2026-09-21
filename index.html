@@ -234,10 +234,10 @@
   }
   table.data-table th {
     position: sticky; top: 0;
-    background: var(--surface);
+    background: var(--bg);
     color: var(--ink-soft);
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 500;
     border-bottom: 1px solid var(--line);
   }
   table.data-table tbody tr:last-child td { border-bottom: none; }
@@ -245,11 +245,11 @@
   table.data-table tr.clickable { cursor: pointer; }
   table.data-table tr.clickable:hover { background: var(--primary-soft); }
   table.data-table tr.active { background: var(--primary-soft); font-weight: 600; }
-  table.data-table tr.done { background: var(--present-bg); }
+  table.data-table tr.done { background: var(--primary-soft); }
   table.data-table td.rname { font-weight: 600; }
   table.data-table td.cell-present { color: var(--present); font-weight: 700; }
   table.data-table td.cell-absent { color: var(--absent); font-weight: 700; }
-  table.data-table td.cell-done { color: var(--present); font-weight: 700; }
+  table.data-table td.cell-done { color: var(--primary); font-weight: 700; }
   table.data-table td.cell-notdone { color: var(--ink-soft); }
 
   .view-tabs {
@@ -456,7 +456,7 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 (실시간 저장)</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v12</div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
@@ -572,7 +572,7 @@ function renderReviewTable() {
   entries.forEach(e => {
     const { floor, room: roomLabel } = splitRoomName(e.room);
     rowsHtml += `
-      <tr>
+      <tr class="${e.completed ? "done" : ""}">
         <td>${e.examNo}</td>
         <td>${floor}</td>
         <td>${roomLabel}</td>
