@@ -344,6 +344,11 @@
     font-weight: 600;
   }
 
+  .seat-grid-scroll {
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
   .seat-grid {
     display: grid;
     gap: 10px;
@@ -456,7 +461,7 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v12</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v13</div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
@@ -674,7 +679,7 @@ function renderRoom() {
       </div>
       <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
     </div>
-    <div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, 1fr); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div>
+    <div class="seat-grid-scroll"><div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, minmax(100px, 1fr)); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div></div>
     <div class="legend">
       <div class="legend-item"><span class="legend-dot present"></span>응시</div>
       <div class="legend-item"><span class="legend-dot absent"></span>결시</div>
