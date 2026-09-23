@@ -132,6 +132,34 @@
     overflow: auto;
     max-height: 65vh;
   }
+
+  .accordion-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .venue-accordion {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .venue-accordion-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    cursor: pointer;
+  }
+  .venue-accordion-head:hover { background: var(--bg); }
+  .venue-accordion-head .rname { font-weight: 700; font-size: 15px; min-width: 200px; }
+  .venue-accordion-head .venue-accordion-stats { font-size: 13.5px; color: var(--ink-soft); flex: 1; }
+  .venue-accordion-head .chev { color: var(--ink-soft); font-size: 12px; transition: transform .15s ease; }
+  .venue-accordion.open .venue-accordion-head .chev { transform: rotate(180deg); }
+  .venue-accordion-body {
+    display: none;
+    border-top: 1px solid var(--line);
+    max-height: 50vh;
+    overflow: auto;
+  }
+  .venue-accordion-body table.data-table { width: 100%; }
+
   table.data-table { border-collapse: collapse; width: auto; font-size: 15px; }
   table.data-table th, table.data-table td {
     padding: 7px 8px;
@@ -201,7 +229,7 @@
 
 <div class="sheet-panel" id="sheetPanel"></div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v5</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v6</div>
 
 <script>
 /* =====================================================================
@@ -209,7 +237,7 @@
    실서비스 연동 시에는 이 데이터를 GAS 웹앱(doGet)에서 주기적으로
    fetch해서 채우면, 감독관 페이지의 클릭 결과가 여기에도 실시간 반영됩니다.
    ===================================================================== */
-const GAS_URL = "https://script.google.com/macros/s/AKfycbz69aC2GYBOy4u_Aov-PsCZDpnx3aV3HdNyEvkvrD4fhGi7355GC8vP5cQNH18nqsef/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbxMR_ajrFITzhi5lRhH6PGnQ_xr9Q5yITo4YT23wL29Xeda87yjeJ75bhNebbjvQNzw/exec";
 let VENUE_DATA = {};
 
 async function loadVenueData() {
@@ -399,35 +427,82 @@ function buildFullRows() {
 }
 
 function renderFullStatusSheet() {
-  const entries = buildFullRows();
-  let rows = "";
-  entries.forEach(e => {
-    const cls = e.status === "응시" ? "cell-present" : (e.status === "결시" ? "cell-absent" : "cell-mismatch");
-    rows += `
-      <tr class="${e.registered === "등록완료" ? "done" : ""}">
-        <td>${esc(e.examNo)}</td>
-        <td>${formatRoomLabel(e.room)}</td>
-        <td class="${cls}">${esc(e.status)}</td>
-        <td>${esc(e.venue)}</td>
-        <td class="${e.registered === "등록완료" ? "cell-done" : "cell-notdone"}">${esc(e.registered)}</td>
-      </tr>
+  let total = 0, present = 0, absent = 0;
+  let sectionsHtml = "";
+
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    const vs = computeVenueStats(venue);
+    total += vs.total; present += vs.present; absent += vs.absent;
+    sectionsHtml += `
+      <div class="venue-accordion" data-venue="${esc(venueName)}">
+        <div class="venue-accordion-head">
+          <span class="rname">${esc(venueName)}</span>
+          <span class="venue-accordion-stats">총원 ${vs.total} · 응시 <b class="cell-present">${vs.present}</b> · 결시 <b class="cell-absent">${vs.absent}</b></span>
+          <span class="chev">▾</span>
+        </div>
+        <div class="venue-accordion-body"></div>
+      </div>
     `;
   });
+
   return `
     <div class="sheet-panel-head">
       <div>
         <h2>전체현황</h2>
-        <div class="sheet-note">수험번호 단위 전체 목록 (${entries.length.toLocaleString()}명, 빈자리 제외)</div>
+        <div class="sheet-note">전체 ${total.toLocaleString()}명 · 응시 ${present.toLocaleString()} · 결시 ${absent.toLocaleString()} — 고사장을 눌러 수험번호 단위로 펼쳐보세요 (빈자리 제외)</div>
       </div>
       <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
     </div>
-    <div class="data-table-wrap">
-      <table class="data-table">
-        <thead><tr><th>수험번호</th><th>고사실</th><th>응결시</th><th>고사장</th><th>등록상태</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
+    <div class="accordion-wrap">${sectionsHtml}</div>
   `;
+}
+
+function buildVenueStudentTable(venueName) {
+  const venue = VENUE_DATA[venueName];
+  const statusText = { present: "응시", absent: "결시", pending: "미정" };
+  let rows = "";
+  venue.rooms.forEach(room => {
+    room.seats.forEach(seat => {
+      if (seat.status === "empty") return;
+      const cls = seat.status === "present" ? "cell-present" : (seat.status === "absent" ? "cell-absent" : "cell-mismatch");
+      rows += `
+        <tr class="${room.completed ? "done" : ""}">
+          <td>${esc(seat.examNo || "")}</td>
+          <td>${esc(formatRoomLabel(room.name))}</td>
+          <td class="num ${cls}">${statusText[seat.status] || seat.status}</td>
+          <td class="${room.completed ? "cell-done" : "cell-notdone"}">${room.completed ? "등록완료" : "미등록"}</td>
+        </tr>
+      `;
+    });
+  });
+  return `
+    <table class="data-table">
+      <thead><tr><th>수험번호</th><th>고사실</th><th class="num">응결시</th><th>등록상태</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+function initFullStatusAccordion() {
+  document.querySelectorAll(".venue-accordion").forEach(sec => {
+    const head = sec.querySelector(".venue-accordion-head");
+    const body = sec.querySelector(".venue-accordion-body");
+    let built = false;
+    head.onclick = () => {
+      const isOpen = sec.classList.contains("open");
+      if (isOpen) {
+        sec.classList.remove("open");
+        body.style.display = "none";
+        return;
+      }
+      if (!built) {
+        body.innerHTML = buildVenueStudentTable(sec.dataset.venue);
+        built = true;
+      }
+      sec.classList.add("open");
+      body.style.display = "block";
+    };
+  });
 }
 
 function buildFullStatusRows() {
@@ -506,6 +581,7 @@ function renderPanel() {
   const sheet = SHEETS.find(s => s.key === currentSheet);
   document.getElementById("sheetPanel").innerHTML = sheet.render();
   initDownload(sheet.csv);
+  if (sheet.key === "fullStatus") initFullStatusAccordion();
 }
 
 async function boot() {
