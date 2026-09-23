@@ -201,7 +201,7 @@
 
 <div class="sheet-panel" id="sheetPanel"></div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v4</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v5</div>
 
 <script>
 /* =====================================================================
@@ -209,7 +209,7 @@
    실서비스 연동 시에는 이 데이터를 GAS 웹앱(doGet)에서 주기적으로
    fetch해서 채우면, 감독관 페이지의 클릭 결과가 여기에도 실시간 반영됩니다.
    ===================================================================== */
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbx0mt07c5IhTfvYw11MPCCAgYJK5rNowoeYzToY-2s5exSJ986zqE4H_iT7jekgEEQo/exec";
 let VENUE_DATA = {};
 
 async function loadVenueData() {
@@ -301,6 +301,7 @@ function renderVenueSummarySheet() {
         <h2>고사장별집계</h2>
         <div class="sheet-note">고사장 단위 총원 · 고사실 등록완료 현황 · 응시/결시 · 완료여부</div>
       </div>
+      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
     </div>
     <div class="data-table-wrap">
       <table class="data-table">
@@ -312,6 +313,16 @@ function renderVenueSummarySheet() {
       </table>
     </div>
   `;
+}
+
+function buildVenueSummaryRows() {
+  const out = [];
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    const vs = computeVenueStats(venue);
+    const doneAll = vs.doneRooms === vs.totalRooms;
+    out.push([venueName, vs.total, `${vs.doneRooms}/${vs.totalRooms}`, vs.present, vs.absent, doneAll ? "완료" : "진행중"]);
+  });
+  return { header: ["고사장", "총원", "고사실현황(완료/전체)", "응시", "결시", "완료여부"], rows: out, filename: "고사장별집계" };
 }
 
 /* ---------- 탭: 고사실현황 ---------- */
@@ -340,6 +351,7 @@ function renderRoomStatusSheet() {
         <h2>고사실현황</h2>
         <div class="sheet-note">고사실 단위 총원 · 응시/결시 · 등록상태 · 검증상태 (검증상태: 처리 전 좌석이 0개면 '일치')</div>
       </div>
+      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
     </div>
     <div class="data-table-wrap">
       <table class="data-table">
@@ -351,6 +363,18 @@ function renderRoomStatusSheet() {
       </table>
     </div>
   `;
+}
+
+function buildRoomStatusRows() {
+  const out = [];
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    venue.rooms.forEach(room => {
+      const rs = computeRoomStats(room);
+      const matched = rs.pending === 0;
+      out.push([venueName, formatRoomLabel(room.name), rs.capacity, rs.present, rs.absent, room.completed ? "완료" : "미완료", matched ? "일치" : "불일치"]);
+    });
+  });
+  return { header: ["고사장", "고사실", "총원", "응시", "결시", "등록상태", "검증상태"], rows: out, filename: "고사실현황" };
 }
 
 /* ---------- 탭: 전체현황 ---------- */
@@ -406,6 +430,11 @@ function renderFullStatusSheet() {
   `;
 }
 
+function buildFullStatusRows() {
+  const out = buildFullRows().map(e => [e.examNo, formatRoomLabel(e.room), e.status, e.venue, e.registered]);
+  return { header: ["수험번호", "고사실", "응결시", "고사장", "등록상태"], rows: out, filename: "전체현황" };
+}
+
 /* ---------- 탭: 관리대장 ---------- */
 function renderRegistrySheet() {
   let rows = "";
@@ -429,6 +458,7 @@ function renderRegistrySheet() {
         <h2>관리대장</h2>
         <div class="sheet-note">등록 감독관 수 · 파일ID · URL은 아직 조회 API가 없어 비어 있습니다 (필요하면 GAS에 조회 기능을 추가할 수 있어요)</div>
       </div>
+      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
     </div>
     <div class="data-table-wrap">
       <table class="data-table">
@@ -442,12 +472,21 @@ function renderRegistrySheet() {
   `;
 }
 
+function buildRegistryRows() {
+  const out = [];
+  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
+    const vs = computeVenueStats(venue);
+    out.push([venueName, "-", vs.totalRooms, vs.doneRooms, "-", "-"]);
+  });
+  return { header: ["고사장", "등록 감독관 수", "총 고사실수", "완료 고사실수", "파일ID", "URL"], rows: out, filename: "관리대장" };
+}
+
 /* ---------- 탭 전환 ---------- */
 const SHEETS = [
-  { key: "venueSummary", label: "고사장별집계", render: renderVenueSummarySheet },
-  { key: "roomStatus", label: "고사실현황", render: renderRoomStatusSheet },
-  { key: "fullStatus", label: "전체현황", render: renderFullStatusSheet },
-  { key: "registry", label: "관리대장", render: renderRegistrySheet }
+  { key: "venueSummary", label: "고사장별집계", render: renderVenueSummarySheet, csv: buildVenueSummaryRows },
+  { key: "roomStatus", label: "고사실현황", render: renderRoomStatusSheet, csv: buildRoomStatusRows },
+  { key: "fullStatus", label: "전체현황", render: renderFullStatusSheet, csv: buildFullStatusRows },
+  { key: "registry", label: "관리대장", render: renderRegistrySheet, csv: buildRegistryRows }
 ];
 let currentSheet = "venueSummary";
 
@@ -466,7 +505,7 @@ function renderTabs() {
 function renderPanel() {
   const sheet = SHEETS.find(s => s.key === currentSheet);
   document.getElementById("sheetPanel").innerHTML = sheet.render();
-  if (currentSheet === "fullStatus") initDownload();
+  initDownload(sheet.csv);
 }
 
 async function boot() {
@@ -490,15 +529,14 @@ async function boot() {
 document.getElementById("refreshBtn").addEventListener("click", boot);
 boot();
 
-/* ---------- CSV 다운로드 (전체현황 탭 전용) ---------- */
-function buildCsv() {
-  const rows = [["수험번호", "고사실", "응결시", "고사장", "등록상태"]];
-  buildFullRows().forEach(e => rows.push([e.examNo, e.room, e.status, e.venue, e.registered]));
-  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+/* ---------- CSV 다운로드 (모든 탭 공통) ---------- */
+function buildCsv(header, rows) {
+  const all = [header, ...rows];
+  const csv = all.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
   return "\uFEFF" + csv;
 }
 
-async function initDownload() {
+async function initDownload(csvBuilder) {
   const btn = document.getElementById("downloadBtn");
   if (!btn) return;
   if (!window.claude || typeof window.claude.use !== "function") return;
@@ -510,9 +548,10 @@ async function initDownload() {
     btn.disabled = true;
     const original = btn.innerHTML;
     try {
-      const csv = buildCsv();
+      const { header, rows, filename } = csvBuilder();
+      const csv = buildCsv(header, rows);
       const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-      await downloads.save({ filename: `전체현황_${today}.csv`, data: csv });
+      await downloads.save({ filename: `${filename}_${today}.csv`, data: csv });
     } catch (e) {
       if (e && e.code !== "declined") {
         btn.innerHTML = "다운로드 실패";

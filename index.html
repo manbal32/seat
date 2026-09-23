@@ -124,8 +124,8 @@
   }
   .phone-input {
     width: 100%;
-    font-size: 24px;
-    letter-spacing: 6px;
+    font-size: 22px;
+    letter-spacing: 4px;
     text-align: center;
     padding: 14px 10px;
     border-radius: var(--radius);
@@ -441,23 +441,23 @@
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
     <p class="login-kicker">고사장 좌석배치 관리</p>
-    <h1 class="login-title">전화번호 뒷자리 4자리를<br>입력해 주세요</h1>
+    <h1 class="login-title">휴대전화 번호를<br>입력해 주세요</h1>
 
-    <label class="field-label" for="phoneInput">휴대전화 뒷자리 4자리</label>
+    <label class="field-label" for="phoneInput">휴대전화 번호 8자리 (010 제외)</label>
     <input
       id="phoneInput"
       class="phone-input"
       type="tel"
       inputmode="numeric"
-      maxlength="4"
-      placeholder="0000"
+      maxlength="8"
+      placeholder="00000000"
       autocomplete="off"
     >
     <button class="login-btn" id="loginBtn">확인</button>
     <p class="login-error" id="loginError"></p>
 
     <p class="login-note">
-      본부감독으로 등록된 전화번호 뒷자리를 입력하면 담당 고사장 좌석배치도로 바로 이동합니다.
+      본부감독으로 등록된 휴대전화 번호(010 제외 8자리)를 입력하면 담당 고사장 좌석배치도로 바로 이동합니다.
       번호를 확인할 수 없는 경우 자격운영팀으로 문의해 주세요.
     </p>
   </div>
@@ -497,10 +497,10 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v16</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v17</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzBMuKqToa5asHDhg77r1FMl5zF_1u7wYu8SWtc6X8NXY0e6KMP51xuBHzO-rl3Ua7GsQ/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbx0mt07c5IhTfvYw11MPCCAgYJK5rNowoeYzToY-2s5exSJ986zqE4H_iT7jekgEEQo/exec";
 
 /* =====================================================================
    앱 로직
@@ -888,7 +888,7 @@ const loginBtn = document.getElementById("loginBtn");
 const loginError = document.getElementById("loginError");
 
 phoneInput.addEventListener("input", () => {
-  phoneInput.value = phoneInput.value.replace(/\D/g, "").slice(0, 4);
+  phoneInput.value = phoneInput.value.replace(/\D/g, "").slice(0, 8);
   loginError.textContent = "";
 });
 
@@ -906,8 +906,8 @@ let failCount = 0;
 
 async function attemptLogin() {
   const val = phoneInput.value.trim();
-  if (val.length !== 4) {
-    loginError.textContent = "4자리 숫자를 입력해 주세요.";
+  if (val.length !== 8) {
+    loginError.textContent = "8자리 숫자를 입력해 주세요.";
     return;
   }
   if (failCount >= 5) {
