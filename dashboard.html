@@ -229,7 +229,7 @@
 
 <div class="sheet-panel" id="sheetPanel"></div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v6</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v7</div>
 
 <script>
 /* =====================================================================
@@ -355,41 +355,57 @@ function buildVenueSummaryRows() {
 
 /* ---------- 탭: 고사실현황 ---------- */
 function renderRoomStatusSheet() {
-  let rows = "";
+  let sectionsHtml = "";
   Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    venue.rooms.forEach(room => {
-      const rs = computeRoomStats(room);
-      const matched = rs.pending === 0;
-      rows += `
-        <tr class="${room.completed ? "done" : ""}">
-          <td>${esc(venueName)}</td>
-          <td>${formatRoomLabel(room.name)}</td>
-          <td class="num">${rs.capacity}</td>
-          <td class="num cell-present">${rs.present}</td>
-          <td class="num cell-absent">${rs.absent}</td>
-          <td class="${room.completed ? "cell-done" : "cell-notdone"}">${room.completed ? "완료" : "미완료"}</td>
-          <td class="${matched ? "cell-done" : "cell-mismatch"}">${matched ? "일치" : "불일치"}</td>
-        </tr>
-      `;
-    });
+    const vs = computeVenueStats(venue);
+    sectionsHtml += `
+      <div class="venue-accordion" data-venue="${esc(venueName)}">
+        <div class="venue-accordion-head">
+          <span class="rname">${esc(venueName)}</span>
+          <span class="venue-accordion-stats">고사실 ${vs.doneRooms}/${vs.totalRooms} 완료 · 응시 <b class="cell-present">${vs.present}</b> · 결시 <b class="cell-absent">${vs.absent}</b></span>
+          <span class="chev">▾</span>
+        </div>
+        <div class="venue-accordion-body"></div>
+      </div>
+    `;
   });
+
   return `
     <div class="sheet-panel-head">
       <div>
         <h2>고사실현황</h2>
-        <div class="sheet-note">고사실 단위 총원 · 응시/결시 · 등록상태 · 검증상태 (검증상태: 처리 전 좌석이 0개면 '일치')</div>
+        <div class="sheet-note">고사장을 눌러 고사실 단위 총원 · 응시/결시 · 등록상태 · 검증상태를 확인하세요</div>
       </div>
       <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
     </div>
-    <div class="data-table-wrap">
-      <table class="data-table">
-        <thead><tr>
-          <th>고사장</th><th>고사실</th><th class="num">총원</th>
-          <th class="num">응시</th><th class="num">결시</th><th>등록상태</th><th>검증상태</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
+    <div class="accordion-wrap">${sectionsHtml}</div>
+  `;
+}
+
+function buildRoomStatusVenueTable(venueName) {
+  const venue = VENUE_DATA[venueName];
+  let rows = "";
+  venue.rooms.forEach(room => {
+    const rs = computeRoomStats(room);
+    const matched = rs.pending === 0;
+    rows += `
+      <tr class="${room.completed ? "done" : ""}">
+        <td>${esc(formatRoomLabel(room.name))}</td>
+        <td class="num">${rs.capacity}</td>
+        <td class="num cell-present">${rs.present}</td>
+        <td class="num cell-absent">${rs.absent}</td>
+        <td class="${room.completed ? "cell-done" : "cell-notdone"}">${room.completed ? "완료" : "미완료"}</td>
+        <td class="${matched ? "cell-done" : "cell-mismatch"}">${matched ? "일치" : "불일치"}</td>
+      </tr>
+    `;
+  });
+  return `
+    <table class="data-table">
+      <thead><tr>
+        <th>고사실</th><th class="num">총원</th><th class="num">응시</th><th class="num">결시</th><th>등록상태</th><th>검증상태</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
   `;
 }
 
@@ -483,7 +499,7 @@ function buildVenueStudentTable(venueName) {
   `;
 }
 
-function initFullStatusAccordion() {
+function initAccordion(buildTableFn) {
   document.querySelectorAll(".venue-accordion").forEach(sec => {
     const head = sec.querySelector(".venue-accordion-head");
     const body = sec.querySelector(".venue-accordion-body");
@@ -496,7 +512,7 @@ function initFullStatusAccordion() {
         return;
       }
       if (!built) {
-        body.innerHTML = buildVenueStudentTable(sec.dataset.venue);
+        body.innerHTML = buildTableFn(sec.dataset.venue);
         built = true;
       }
       sec.classList.add("open");
@@ -581,7 +597,8 @@ function renderPanel() {
   const sheet = SHEETS.find(s => s.key === currentSheet);
   document.getElementById("sheetPanel").innerHTML = sheet.render();
   initDownload(sheet.csv);
-  if (sheet.key === "fullStatus") initFullStatusAccordion();
+  if (sheet.key === "fullStatus") initAccordion(buildVenueStudentTable);
+  if (sheet.key === "roomStatus") initAccordion(buildRoomStatusVenueTable);
 }
 
 async function boot() {
