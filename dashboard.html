@@ -1,661 +1,406 @@
 <!DOCTYPE html>
+<!-- make_site 1.0 · 2026-10-01 10:48 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>고사장 통합 현황판</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADsP_51_261031 · 고사장 통합 현황판</title>
 <style>
   :root {
-    --bg: #F5F6F8;
-    --surface: #FFFFFF;
-    --ink: #1B2231;
-    --ink-soft: #5A6376;
-    --line: #E1E4EA;
-    --primary: #2C5282;
-    --primary-ink: #FFFFFF;
-    --primary-soft: #E9F0FA;
-    --present: #2F8F5B;
-    --present-bg: #E7F5EC;
-    --absent: #C0524B;
-    --absent-bg: #FBEBEA;
+    --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
+    --line: #E1E4EA; --primary: #2C5282; --primary-ink: #FFFFFF; --primary-soft: #E9F0FA;
+    --ok: #2F8F5B; --ok-bg: #E7F5EC; --warn: #9A6A12; --warn-bg: #FBF1DC; --bad: #C0524B; --bad-bg: #FBEBEA;
     --font: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-    box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  :root:not([data-theme="light"]) {
-    @media (prefers-color-scheme: dark) {
-      --bg: #14161C; --surface: #1C1F28; --ink: #EDEFF3; --ink-soft: #9CA3B3;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161C; --surface: #1C1F28; --ink: #EDEFF3; --ink-soft: #9CA3B3; --ink-faint: #7A8294;
       --line: #2C3140; --primary: #5B8FCC; --primary-ink: #10131A; --primary-soft: #1F2D42;
-      --present: #4CAE7C; --present-bg: #17301F; --absent: #D9776E; --absent-bg: #34201E;
+      --ok: #4CAE7C; --ok-bg: #17301F; --warn: #E0B050; --warn-bg: #33290F; --bad: #D9776E; --bad-bg: #34201E;
     }
   }
-  :root[data-theme="dark"] {
-    --bg: #14161C; --surface: #1C1F28; --ink: #EDEFF3; --ink-soft: #9CA3B3;
-    --line: #2C3140; --primary: #5B8FCC; --primary-ink: #10131A; --primary-soft: #1F2D42;
-    --present: #4CAE7C; --present-bg: #17301F; --absent: #D9776E; --absent-bg: #34201E;
-  }
-  html, body { height: 100%; margin: 0; }
   * { box-sizing: border-box; }
+  html, body { margin: 0; }
   body { background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 18px 24px 70px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .head h1 { font-size: 19px; margin: 0; }
+  .exam-chip { display: inline-block; background: var(--primary-soft); color: var(--primary); border-radius: 999px; padding: 3px 12px; font-size: 13px; font-weight: 600; margin-left: 8px; vertical-align: 2px; }
+  .head .sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; }
+  .badge-int { display: inline-block; margin-top: 8px; font-size: 11px; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+  .tools { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-soft); }
+  button { font-family: inherit; cursor: pointer; }
+  .btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 8px 14px; font-size: 13px; }
+  .btn:hover { background: var(--primary-soft); }
+  .btn:disabled { cursor: not-allowed; }
 
-  .topbar {
-    padding: calc(16px + env(safe-area-inset-top, 0px)) 20px 0;
-    background: var(--surface);
-    border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; z-index: 10;
-  }
-  .topbar h1 { font-size: 17px; margin: 0 0 3px; font-weight: 700; }
-  .topbar .sub { font-size: 12.5px; color: var(--ink-soft); }
-  .internal-badge {
-    display: inline-block;
-    margin-top: 8px;
-    font-size: 11px;
-    color: var(--ink-soft);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 3px 10px;
-  }
-  .refresh-btn {
-    margin-top: 8px;
-    margin-left: 8px;
-    font-size: 11.5px;
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--line);
-    background: var(--surface);
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
-  .refresh-btn:disabled { opacity: .5; cursor: not-allowed; }
-  .refresh-note {
-    margin-left: 6px;
-    font-size: 11px;
-    color: var(--ink-soft);
-  }
+  .dl-bar { position: sticky; top: 0; z-index: 10; background: var(--bg); padding: 8px 0 10px; }
+  .dl-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .dl-msg { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-bottom: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-faint); flex: none; }
+  .dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+  .dl-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  .dl-btn { border: 1px solid var(--primary); background: var(--primary); color: var(--primary-ink); border-radius: 8px; padding: 9px 16px; font-size: 13.5px; font-weight: 600; }
+  .dl-btn.off { background: var(--surface); color: var(--ink-faint); border-color: var(--line); font-weight: 500; }
+  .dl-btn:disabled { opacity: .6; cursor: progress; }
+  .dl-sub { margin-top: 9px; font-size: 12.5px; color: var(--ink-soft); min-height: 18px; }
+  .dl-sub a { color: var(--primary); cursor: pointer; text-decoration: underline; }
 
-  .overall-bar {
-    display: flex; gap: 10px; padding: 14px 20px; overflow-x: auto;
-  }
-  .overall-chip {
-    flex: none; background: var(--surface); border: 1px solid var(--line);
-    border-radius: 10px; padding: 10px 16px; min-width: 90px;
-  }
-  .overall-chip .num { font-size: 19px; font-weight: 700; line-height: 1.2; }
-  .overall-chip .label { font-size: 11px; color: var(--ink-soft); margin-top: 3px; }
-  .overall-chip.present .num { color: var(--present); }
-  .overall-chip.absent .num { color: var(--absent); }
+  .summary { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); margin: 4px 0 10px; align-items: center; }
+  .summary b { color: var(--ink); font-weight: 600; }
+  .filters { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .filters input[type=text] { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font-size: 13px; width: 190px; }
 
-  .sheet-tabs {
-    display: flex;
-    gap: 6px;
-    padding: 0 20px 12px;
-    overflow-x: auto;
-    background: var(--surface);
-    position: sticky;
-    top: 0;
-  }
-  .sheet-tab {
-    flex: none;
-    padding: 8px 14px;
-    border-radius: 8px;
-    border: 1px solid var(--line);
-    background: var(--bg);
-    color: var(--ink-soft);
-    font-size: 13px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .sheet-tab.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--primary-ink);
-    font-weight: 600;
-  }
-
-  .sheet-panel { padding: 16px 20px 40px; }
-  .sheet-panel-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-  .sheet-panel-head h2 { font-size: 15px; margin: 0; }
-  .sheet-note { font-size: 11.5px; color: var(--ink-soft); margin-top: 3px; }
-
-  .data-table-wrap {
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--surface);
-    overflow: auto;
-    max-height: 65vh;
-  }
-
-  .accordion-wrap { display: flex; flex-direction: column; gap: 8px; }
-  .venue-accordion {
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
-    overflow: hidden;
-  }
-  .venue-accordion-head {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
-    cursor: pointer;
-  }
-  .venue-accordion-head:hover { background: var(--bg); }
-  .venue-accordion-head .rname { font-weight: 700; font-size: 15px; min-width: 200px; }
-  .venue-accordion-head .venue-accordion-stats { font-size: 13.5px; color: var(--ink-soft); flex: 1; }
-  .venue-accordion-head .chev { color: var(--ink-soft); font-size: 12px; transition: transform .15s ease; }
-  .venue-accordion.open .venue-accordion-head .chev { transform: rotate(180deg); }
-  .venue-accordion-body {
-    display: none;
-    border-top: 1px solid var(--line);
-    max-height: 50vh;
-    overflow: auto;
-  }
-  .venue-accordion-body table.data-table { width: 100%; }
-
-  table.data-table { border-collapse: collapse; width: auto; font-size: 15px; }
-  table.data-table th, table.data-table td {
-    padding: 7px 8px;
-    text-align: left;
-    white-space: nowrap;
-    border-bottom: 1px solid var(--line);
-  }
-  table.data-table th {
-    position: sticky; top: 0;
-    background: var(--bg);
-    color: var(--ink-soft);
-    font-size: 15px;
-    font-weight: 500;
-    border-bottom: 1px solid var(--line);
-    z-index: 1;
-  }
-  table.data-table tbody tr:last-child td { border-bottom: none; }
-  table.data-table td.num, table.data-table th.num { text-align: center; }
-  table.data-table tr.done { background: var(--primary-soft); }
-  .cell-present { color: var(--present); font-weight: 700; }
-  .cell-absent { color: var(--absent); font-weight: 700; }
-  .cell-done { color: var(--primary); font-weight: 700; }
-  .cell-notdone { color: var(--ink-soft); }
-  .cell-mismatch { color: var(--absent); font-weight: 700; }
-  .cell-dim { color: var(--ink-soft); font-style: italic; }
-
-  .download-btn {
-    display: none;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 13px;
-    border-radius: 8px;
-    border: 1px solid var(--primary);
-    background: var(--primary-soft);
-    color: var(--primary);
-    font-size: 12.5px;
-    font-weight: 600;
-    cursor: pointer;
-  }
-  .download-btn.ready { display: inline-flex; }
-  .download-btn:disabled { opacity: .6; cursor: not-allowed; }
-
-  .demo-badge {
-    position: fixed;
-    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    right: 14px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    color: var(--ink-soft);
-    font-size: 11px;
-    padding: 6px 10px;
-    border-radius: 8px;
-  }
+  .tbl-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { background: var(--bg); color: var(--ink-soft); font-weight: 500; }
+  th:first-child, td:first-child { text-align: left; padding-left: 16px; }
+  tbody tr.v { cursor: pointer; }
+  tbody tr.v:hover td { background: var(--primary-soft); }
+  tbody tr:last-child td { border-bottom: none; }
+  .chev { display: inline-block; width: 14px; color: var(--ink-faint); transition: transform .12s; }
+  tr.v.op .chev { transform: rotate(90deg); }
+  .n-ok { color: var(--ok); font-weight: 600; } .n-bad { color: var(--bad); font-weight: 600; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 6px; font-size: 12.5px; font-weight: 600; }
+  .pill.ok { background: var(--ok-bg); color: var(--ok); }
+  .pill.wait { background: var(--bg); color: var(--ink-soft); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn); }
+  .pill.bad { background: var(--bad-bg); color: var(--bad); }
+  tr.detail > td { text-align: left; background: var(--bg); padding: 10px 16px 14px 36px; white-space: normal; }
+  .rooms-t { width: auto; min-width: 520px; font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .rooms-t th, .rooms-t td { padding: 6px 12px; text-align: center; background: var(--surface); }
+  .rooms-t th { background: var(--bg); }
+  .rooms-t th:first-child, .rooms-t td:first-child { padding-left: 12px; text-align: left; }
+  .note { color: var(--ink-soft); font-size: 13px; }
+  .empty { padding: 36px; text-align: center; color: var(--ink-soft); }
+  .verbadge { position: fixed; right: 14px; bottom: 14px; font-size: 11px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; z-index: 20; }
+  .verbadge.bad { color: var(--bad); border-color: var(--bad); }
 </style>
 </head>
 <body>
+<div class="page">
+  <div class="head">
+    <div>
+      <h1>고사장 통합 현황판 <span class="exam-chip">ADsP_51_261031</span></h1>
+      <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
+      <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
+    </div>
+    <div class="tools">
+      <label><input type="checkbox" id="auto"> 1분마다 자동 새로고침</label>
+      <span id="stamp"></span>
+      <button class="btn" id="refresh">새로고침</button>
+    </div>
+  </div>
 
-<div class="topbar">
-  <h1>고사장 통합 현황판</h1>
-  <div class="sub">전체 고사장 응시·결시 현황을 한 화면에서 확인합니다</div>
-  <span class="internal-badge">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
-  <button class="refresh-btn" id="refreshBtn">&#8635; 새로고침</button>
-  <span class="refresh-note" id="refreshNote"></span>
-  <div class="overall-bar" id="overallBar"></div>
-  <div class="sheet-tabs" id="sheetTabs"></div>
+  <div class="dl-bar">
+    <div class="dl-card">
+      <div class="dl-msg"><span class="dot" id="dlDot"></span><span id="dlMsg">불러오는 중…</span></div>
+      <div class="dl-btns">
+        <button class="dl-btn off" id="dlRooms">고사실별 취합 전체 엑셀 다운로드</button>
+        <button class="dl-btn off" id="dlAtt">응결시 취합 전체 엑셀 다운로드</button>
+      </div>
+      <div class="dl-sub" id="dlSub"></div>
+    </div>
+  </div>
+
+  <div class="summary" id="summary"></div>
+  <div class="tbl-wrap">
+    <table>
+      <colgroup><col style="width:25%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:7%"><col style="width:10%"><col style="width:16%"><col style="width:16%"></colgroup>
+      <thead><tr><th>고사장</th><th>총원</th><th>고사실 완료</th><th>응시</th><th>결시</th><th>완료여부</th><th>고사실별 취합</th><th>응결시 취합</th></tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
 </div>
-
-<div class="sheet-panel" id="sheetPanel"></div>
-
-<div class="demo-badge">GAS 백엔드 연동됨 · v7</div>
+<div class="verbadge" id="ver">대시보드 v20</div>
 
 <script>
-/* =====================================================================
-   샘플 데이터: 실제 googlesheetarray.py 파싱 결과로 교체 예정
-   실서비스 연동 시에는 이 데이터를 GAS 웹앱(doGet)에서 주기적으로
-   fetch해서 채우면, 감독관 페이지의 클릭 결과가 여기에도 실시간 반영됩니다.
-   ===================================================================== */
-const GAS_URL = "https://script.google.com/macros/s/AKfycbxMR_ajrFITzhi5lRhH6PGnQ_xr9Q5yITo4YT23wL29Xeda87yjeJ75bhNebbjvQNzw/exec";
-let VENUE_DATA = {};
-
-async function loadVenueData() {
-  const res = await fetch(`${GAS_URL}?action=admin`);
-  if (!res.ok) throw new Error("network");
-  const data = await res.json();
-  Object.values(data).forEach(v => {
-    v.rooms.forEach(r => { if (typeof r.completed !== "boolean") r.completed = false; });
-  });
-  VENUE_DATA = data;
-}
-
-function computeRoomStats(room) {
-  let capacity = 0, present = 0, absent = 0, pending = 0;
-  room.seats.forEach(s => {
-    if (s.status === "empty") return;
-    capacity++;
-    if (s.status === "present") present++;
-    else if (s.status === "absent") absent++;
-    else pending++;
-  });
-  return { capacity, present, absent, pending };
-}
-
-function computeVenueStats(venue) {
-  let total = 0, present = 0, absent = 0, pending = 0;
-  const doneRooms = venue.rooms.filter(r => r.completed).length;
-  venue.rooms.forEach(r => {
-    const rs = computeRoomStats(r);
-    total += rs.capacity; present += rs.present; absent += rs.absent; pending += rs.pending;
-  });
-  return { total, present, absent, pending, doneRooms, totalRooms: venue.rooms.length };
-}
-
-function supervisorCount(venueName) {
-  return null; // 백엔드에 감독관 조회 API가 아직 없음 (로그인 조회 전용)
-}
-
-// "3층 1고사실" -> "3층 · 1고사실" 처럼 층수와 고사실을 시각적으로 구분
-function formatRoomLabel(name) {
-  const idx = name.indexOf(" ");
-  if (idx === -1) return name;
-  return name.slice(0, idx) + " · " + name.slice(idx + 1);
-}
-
-function esc(v) {
-  return String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/* ---------- 전체 요약 ---------- */
-function renderOverall() {
-  let total = 0, present = 0, absent = 0, pending = 0, venueCount = 0, doneRooms = 0, totalRooms = 0;
-  Object.values(VENUE_DATA).forEach(v => {
-    venueCount++;
-    const s = computeVenueStats(v);
-    total += s.total; present += s.present; absent += s.absent; pending += s.pending;
-    doneRooms += s.doneRooms; totalRooms += s.totalRooms;
-  });
-  document.getElementById("overallBar").innerHTML = `
-    <div class="overall-chip"><div class="num">${venueCount}</div><div class="label">전체 고사장</div></div>
-    <div class="overall-chip"><div class="num">${total}</div><div class="label">전체 응시대상</div></div>
-    <div class="overall-chip present"><div class="num">${present}</div><div class="label">응시</div></div>
-    <div class="overall-chip absent"><div class="num">${absent}</div><div class="label">결시</div></div>
-    <div class="overall-chip"><div class="num">${pending}</div><div class="label">처리 전</div></div>
-    <div class="overall-chip present"><div class="num">${doneRooms}/${totalRooms}</div><div class="label">고사실 등록완료</div></div>
-  `;
-}
-
-/* ---------- 탭: 고사장별집계 ---------- */
-function renderVenueSummarySheet() {
-  let rows = "";
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    const vs = computeVenueStats(venue);
-    const doneAll = vs.doneRooms === vs.totalRooms;
-    rows += `
-      <tr class="${doneAll ? "done" : ""}">
-        <td>${esc(venueName)}</td>
-        <td class="num">${vs.total}</td>
-        <td class="num">${vs.doneRooms}/${vs.totalRooms}</td>
-        <td class="num cell-present">${vs.present}</td>
-        <td class="num cell-absent">${vs.absent}</td>
-        <td class="${doneAll ? "cell-done" : "cell-notdone"}">${doneAll ? "완료" : "진행중"}</td>
-      </tr>
-    `;
-  });
-  return `
-    <div class="sheet-panel-head">
-      <div>
-        <h2>고사장별집계</h2>
-        <div class="sheet-note">고사장 단위 총원 · 고사실 등록완료 현황 · 응시/결시 · 완료여부</div>
-      </div>
-      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
-    </div>
-    <div class="data-table-wrap">
-      <table class="data-table">
-        <thead><tr>
-          <th>고사장</th><th class="num">총원</th><th class="num">고사실현황(완료/전체)</th>
-          <th class="num">응시</th><th class="num">결시</th><th>완료여부</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-function buildVenueSummaryRows() {
-  const out = [];
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    const vs = computeVenueStats(venue);
-    const doneAll = vs.doneRooms === vs.totalRooms;
-    out.push([venueName, vs.total, `${vs.doneRooms}/${vs.totalRooms}`, vs.present, vs.absent, doneAll ? "완료" : "진행중"]);
-  });
-  return { header: ["고사장", "총원", "고사실현황(완료/전체)", "응시", "결시", "완료여부"], rows: out, filename: "고사장별집계" };
-}
-
-/* ---------- 탭: 고사실현황 ---------- */
-function renderRoomStatusSheet() {
-  let sectionsHtml = "";
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    const vs = computeVenueStats(venue);
-    sectionsHtml += `
-      <div class="venue-accordion" data-venue="${esc(venueName)}">
-        <div class="venue-accordion-head">
-          <span class="rname">${esc(venueName)}</span>
-          <span class="venue-accordion-stats">고사실 ${vs.doneRooms}/${vs.totalRooms} 완료 · 응시 <b class="cell-present">${vs.present}</b> · 결시 <b class="cell-absent">${vs.absent}</b></span>
-          <span class="chev">▾</span>
-        </div>
-        <div class="venue-accordion-body"></div>
-      </div>
-    `;
-  });
-
-  return `
-    <div class="sheet-panel-head">
-      <div>
-        <h2>고사실현황</h2>
-        <div class="sheet-note">고사장을 눌러 고사실 단위 총원 · 응시/결시 · 등록상태 · 검증상태를 확인하세요</div>
-      </div>
-      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
-    </div>
-    <div class="accordion-wrap">${sectionsHtml}</div>
-  `;
-}
-
-function buildRoomStatusVenueTable(venueName) {
-  const venue = VENUE_DATA[venueName];
-  let rows = "";
-  venue.rooms.forEach(room => {
-    const rs = computeRoomStats(room);
-    const matched = rs.pending === 0;
-    rows += `
-      <tr class="${room.completed ? "done" : ""}">
-        <td>${esc(formatRoomLabel(room.name))}</td>
-        <td class="num">${rs.capacity}</td>
-        <td class="num cell-present">${rs.present}</td>
-        <td class="num cell-absent">${rs.absent}</td>
-        <td class="${room.completed ? "cell-done" : "cell-notdone"}">${room.completed ? "완료" : "미완료"}</td>
-        <td class="${matched ? "cell-done" : "cell-mismatch"}">${matched ? "일치" : "불일치"}</td>
-      </tr>
-    `;
-  });
-  return `
-    <table class="data-table">
-      <thead><tr>
-        <th>고사실</th><th class="num">총원</th><th class="num">응시</th><th class="num">결시</th><th>등록상태</th><th>검증상태</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-function buildRoomStatusRows() {
-  const out = [];
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    venue.rooms.forEach(room => {
-      const rs = computeRoomStats(room);
-      const matched = rs.pending === 0;
-      out.push([venueName, formatRoomLabel(room.name), rs.capacity, rs.present, rs.absent, room.completed ? "완료" : "미완료", matched ? "일치" : "불일치"]);
-    });
-  });
-  return { header: ["고사장", "고사실", "총원", "응시", "결시", "등록상태", "검증상태"], rows: out, filename: "고사실현황" };
-}
-
-/* ---------- 탭: 전체현황 ---------- */
-function buildFullRows() {
-  const statusLabel = { present: "응시", absent: "결시", pending: "미정" };
-  const out = [];
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    venue.rooms.forEach(room => {
-      room.seats.forEach(seat => {
-        if (seat.status === "empty") return;
-        out.push({
-          examNo: seat.examNo || "",
-          room: room.name,
-          status: statusLabel[seat.status] || seat.status,
-          venue: venueName,
-          registered: room.completed ? "등록완료" : "미등록"
-        });
-      });
-    });
-  });
-  return out;
-}
-
-function renderFullStatusSheet() {
-  let total = 0, present = 0, absent = 0;
-  let sectionsHtml = "";
-
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    const vs = computeVenueStats(venue);
-    total += vs.total; present += vs.present; absent += vs.absent;
-    sectionsHtml += `
-      <div class="venue-accordion" data-venue="${esc(venueName)}">
-        <div class="venue-accordion-head">
-          <span class="rname">${esc(venueName)}</span>
-          <span class="venue-accordion-stats">총원 ${vs.total} · 응시 <b class="cell-present">${vs.present}</b> · 결시 <b class="cell-absent">${vs.absent}</b></span>
-          <span class="chev">▾</span>
-        </div>
-        <div class="venue-accordion-body"></div>
-      </div>
-    `;
-  });
-
-  return `
-    <div class="sheet-panel-head">
-      <div>
-        <h2>전체현황</h2>
-        <div class="sheet-note">전체 ${total.toLocaleString()}명 · 응시 ${present.toLocaleString()} · 결시 ${absent.toLocaleString()} — 고사장을 눌러 수험번호 단위로 펼쳐보세요 (빈자리 제외)</div>
-      </div>
-      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
-    </div>
-    <div class="accordion-wrap">${sectionsHtml}</div>
-  `;
-}
-
-function buildVenueStudentTable(venueName) {
-  const venue = VENUE_DATA[venueName];
-  const statusText = { present: "응시", absent: "결시", pending: "미정" };
-  let rows = "";
-  venue.rooms.forEach(room => {
-    room.seats.forEach(seat => {
-      if (seat.status === "empty") return;
-      const cls = seat.status === "present" ? "cell-present" : (seat.status === "absent" ? "cell-absent" : "cell-mismatch");
-      rows += `
-        <tr class="${room.completed ? "done" : ""}">
-          <td>${esc(seat.examNo || "")}</td>
-          <td>${esc(formatRoomLabel(room.name))}</td>
-          <td class="num ${cls}">${statusText[seat.status] || seat.status}</td>
-          <td class="${room.completed ? "cell-done" : "cell-notdone"}">${room.completed ? "등록완료" : "미등록"}</td>
-        </tr>
-      `;
-    });
-  });
-  return `
-    <table class="data-table">
-      <thead><tr><th>수험번호</th><th>고사실</th><th class="num">응결시</th><th>등록상태</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
-
-function initAccordion(buildTableFn) {
-  document.querySelectorAll(".venue-accordion").forEach(sec => {
-    const head = sec.querySelector(".venue-accordion-head");
-    const body = sec.querySelector(".venue-accordion-body");
-    let built = false;
-    head.onclick = () => {
-      const isOpen = sec.classList.contains("open");
-      if (isOpen) {
-        sec.classList.remove("open");
-        body.style.display = "none";
-        return;
-      }
-      if (!built) {
-        body.innerHTML = buildTableFn(sec.dataset.venue);
-        built = true;
-      }
-      sec.classList.add("open");
-      body.style.display = "block";
-    };
-  });
-}
-
-function buildFullStatusRows() {
-  const out = buildFullRows().map(e => [e.examNo, formatRoomLabel(e.room), e.status, e.venue, e.registered]);
-  return { header: ["수험번호", "고사실", "응결시", "고사장", "등록상태"], rows: out, filename: "전체현황" };
-}
-
-/* ---------- 탭: 관리대장 ---------- */
-function renderRegistrySheet() {
-  let rows = "";
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    const vs = computeVenueStats(venue);
-    const doneAll = vs.doneRooms === vs.totalRooms;
-    rows += `
-      <tr class="${doneAll ? "done" : ""}">
-        <td>${esc(venueName)}</td>
-        <td class="num cell-dim">-</td>
-        <td class="num">${vs.totalRooms}</td>
-        <td class="num">${vs.doneRooms}</td>
-        <td class="cell-dim">-</td>
-        <td class="cell-dim">-</td>
-      </tr>
-    `;
-  });
-  return `
-    <div class="sheet-panel-head">
-      <div>
-        <h2>관리대장</h2>
-        <div class="sheet-note">등록 감독관 수 · 파일ID · URL은 아직 조회 API가 없어 비어 있습니다 (필요하면 GAS에 조회 기능을 추가할 수 있어요)</div>
-      </div>
-      <button class="download-btn" id="downloadBtn"><span>&#8681;</span> CSV 다운로드</button>
-    </div>
-    <div class="data-table-wrap">
-      <table class="data-table">
-        <thead><tr>
-          <th>고사장</th><th class="num">등록 감독관 수</th><th class="num">총 고사실수</th>
-          <th class="num">완료 고사실수</th><th>파일ID</th><th>URL</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-  `;
-}
-
-function buildRegistryRows() {
-  const out = [];
-  Object.entries(VENUE_DATA).forEach(([venueName, venue]) => {
-    const vs = computeVenueStats(venue);
-    out.push([venueName, "-", vs.totalRooms, vs.doneRooms, "-", "-"]);
-  });
-  return { header: ["고사장", "등록 감독관 수", "총 고사실수", "완료 고사실수", "파일ID", "URL"], rows: out, filename: "관리대장" };
-}
-
-/* ---------- 탭 전환 ---------- */
-const SHEETS = [
-  { key: "venueSummary", label: "고사장별집계", render: renderVenueSummarySheet, csv: buildVenueSummaryRows },
-  { key: "roomStatus", label: "고사실현황", render: renderRoomStatusSheet, csv: buildRoomStatusRows },
-  { key: "fullStatus", label: "전체현황", render: renderFullStatusSheet, csv: buildFullStatusRows },
-  { key: "registry", label: "관리대장", render: renderRegistrySheet, csv: buildRegistryRows }
+const GAS_URL = "https://script.google.com/macros/s/AKfycbx5Y5lr4UFdxzbufFPPpXOppVUzc3llTKvJAFxgNVznUEU6zzUDdgHQN1DEvnm5KRHMXg/exec";
+const EXAM_NAME = "ADsP_51_261031";
+const DASH_VERSION = "v20";
+const XLSX_URLS = [
+  "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
+  "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
 ];
-let currentSheet = "venueSummary";
 
-function renderTabs() {
-  const wrap = document.getElementById("sheetTabs");
-  wrap.innerHTML = "";
-  SHEETS.forEach(s => {
-    const btn = document.createElement("button");
-    btn.className = "sheet-tab" + (s.key === currentSheet ? " active" : "");
-    btn.textContent = s.label;
-    btn.onclick = () => { currentSheet = s.key; renderTabs(); renderPanel(); };
-    wrap.appendChild(btn);
-  });
-}
+let SUMMARY = null;          // { venues: [...] }
+let SERVER_VER = null;
+let openIdx = -1;
+let roomCache = {};          // 고사장 이름 -> 고사실별 현황(펼칠 때 한 번만 받아옴)
+let busy = false;
 
-function renderPanel() {
-  const sheet = SHEETS.find(s => s.key === currentSheet);
-  document.getElementById("sheetPanel").innerHTML = sheet.render();
-  initDownload(sheet.csv);
-  if (sheet.key === "fullStatus") initAccordion(buildVenueStudentTable);
-  if (sheet.key === "roomStatus") initAccordion(buildRoomStatusVenueTable);
-}
+const $ = id => document.getElementById(id);
+const esc = v => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const fmtRoom = name => { const i = name.indexOf(" "); return i < 0 ? name : name.slice(0, i) + " · " + name.slice(i + 1); };
+const num = n => Number(n).toLocaleString("ko-KR");
 
-async function boot() {
-  const note = document.getElementById("refreshNote");
-  const btn = document.getElementById("refreshBtn");
-  btn.disabled = true;
-  note.textContent = "불러오는 중...";
+async function gasGet(query, timeoutMs) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs || 60000);
+  let res;
   try {
-    await loadVenueData();
-    renderOverall();
-    renderTabs();
-    renderPanel();
-    note.textContent = "마지막 갱신: " + new Date().toLocaleTimeString("ko-KR");
+    res = await fetch(`${GAS_URL}?${query}`, { signal: ctrl.signal });
   } catch (e) {
-    note.textContent = "불러오기 실패 - 새로고침 버튼을 눌러 다시 시도해 주세요.";
+    if (e && e.name === "AbortError") throw new Error(`시간 초과(${Math.round((timeoutMs || 60000) / 1000)}초 이상 응답 없음)`);
+    throw new Error("요청 차단/네트워크 오류(" + (e && e.message ? e.message : e) + ")");
   } finally {
-    btn.disabled = false;
+    clearTimeout(timer);
+  }
+  if (!res.ok) throw new Error("서버 응답 오류 HTTP " + res.status);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); }
+  catch (e) { throw new Error("JSON이 아닌 응답: " + text.replace(/\s+/g, " ").slice(0, 60)); }
+  if (data && data.error === "unknown action") throw new Error("서버가 이전 버전이에요. 새 Code.gs를 배포해 주세요");
+  if (data && data.error) throw new Error("서버 오류: " + data.error);
+  return data;
+}
+
+/* ---------- 상태 계산 ---------- */
+function statusOf(v) {
+  const done = v.roomsDone === v.rooms;
+  return {
+    done,
+    fin: done ? ["완료", "ok"] : ["진행중", "warn"],
+    rooms: !done ? ["대기", "wait"] : ((v.mismatchRooms === 0 && v.present + v.absent === v.registered) ? ["완료", "ok"] : ["접수 불일치", "bad"]),
+    att: !done ? ["대기", "wait"] : (v.pending === 0 ? ["완료", "ok"] : ["미정 " + v.pending, "bad"])
+  };
+}
+function readiness() {
+  const vs = SUMMARY ? SUMMARY.venues : [];
+  let wait = 0, bad = 0, ok = 0;
+  vs.forEach(v => {
+    const s = statusOf(v);
+    if (s.rooms[0] === "완료" && s.att[0] === "완료") ok++;
+    else if (!s.done) wait++;
+    else bad++;
+  });
+  return { total: vs.length, ok, wait, bad, ready: vs.length > 0 && ok === vs.length };
+}
+
+/* ---------- 화면 ---------- */
+function pill(p) { return `<span class="pill ${p[1]}">${esc(p[0])}</span>`; }
+
+function renderDownloadBar() {
+  const r = readiness();
+  const dot = $("dlDot"), msg = $("dlMsg"), sub = $("dlSub");
+  const b1 = $("dlRooms"), b2 = $("dlAtt");
+  if (!SUMMARY) { dot.className = "dot"; msg.textContent = "불러오는 중…"; return; }
+  if (r.ready) {
+    dot.className = "dot ok";
+    msg.textContent = `모든 고사장(${r.total}곳)이 끝났어요. 지금 받을 수 있어요.`;
+    sub.textContent = "";
+  } else {
+    dot.className = "dot " + (r.bad ? "bad" : "warn");
+    const parts = [];
+    if (r.wait) parts.push(`진행 중 ${r.wait}곳`);
+    if (r.bad) parts.push(`확인 필요 ${r.bad}곳`);
+    msg.textContent = `아직 끝나지 않은 고사장이 ${r.total - r.ok}곳 있어요 (${parts.join(" · ")}). 모두 끝나면 다운로드가 열려요.`;
+    sub.innerHTML = '급하면 <a id="forceLink">미완료 포함해서 받기</a> (한 번 더 확인해요)';
+    const a = $("forceLink");
+    if (a) a.onclick = () => { if (!busy) startDownload("rooms", true); };
+  }
+  [b1, b2].forEach(b => b.classList.toggle("off", !r.ready));
+}
+
+function renderTable() {
+  const tb = $("tb");
+  if (!SUMMARY) { tb.innerHTML = ""; return; }
+  const vs = SUMMARY.venues;
+  let html = "", shown = 0;
+  vs.forEach((v, i) => {
+    const s = statusOf(v);
+    const open = openIdx === i;
+    html += `<tr class="v${open ? " op" : ""}" data-i="${i}">
+      <td><span class="chev">▸</span>${esc(v.name)}</td>
+      <td>${num(v.registered)}</td>
+      <td>${v.roomsDone}/${v.rooms}</td>
+      <td class="n-ok">${num(v.present)}</td>
+      <td class="n-bad">${num(v.absent)}</td>
+      <td>${pill(s.fin)}</td>
+      <td>${pill(s.rooms)}</td>
+      <td>${pill(s.att)}</td></tr>`;
+    shown++;
+    if (open) html += `<tr class="detail"><td colspan="8" id="detail-${i}">${detailHtml(v)}</td></tr>`;
+  });
+  tb.innerHTML = html || `<tr><td colspan="8" class="empty">표시할 고사장이 없습니다.</td></tr>`;
+
+  const tot = vs.reduce((a, v) => (a.reg += v.registered, a.p += v.present, a.a += v.absent, a.rd += v.roomsDone, a.rt += v.rooms, a.vd += (v.roomsDone === v.rooms ? 1 : 0), a), { reg: 0, p: 0, a: 0, rd: 0, rt: 0, vd: 0 });
+  $("summary").innerHTML = `<span>고사장 완료 <b>${tot.vd}/${vs.length}</b></span><span>고사실 등록 <b>${num(tot.rd)}/${num(tot.rt)}</b></span><span>총원 <b>${num(tot.reg)}</b></span><span>응시 <b>${num(tot.p)}</b></span><span>결시 <b>${num(tot.a)}</b></span>`;
+}
+
+function detailHtml(v) {
+  const c = roomCache[v.name];
+  if (!c) return '<span class="note">고사실별 현황을 불러오는 중…</span>';
+  if (c.error) return `<span class="note">불러오지 못했어요(${esc(c.error)})</span>`;
+  const rows = c.rooms.map(r => {
+    const sum = r.present + r.absent + r.pending;
+    const mism = sum !== r.registered;
+    const st = r.completed ? '<span class="pill ok">완료</span>' : '<span class="pill wait">미완료</span>';
+    return `<tr><td>${esc(fmtRoom(r.name))}</td><td>${r.registered}</td><td class="n-ok">${r.present}</td><td class="n-bad">${r.absent}</td><td>${r.pending}</td><td>${st}</td><td>${mism ? `<span class="n-bad">접수 ${r.registered} ≠ 합계 ${sum}</span>` : '<span class="note">맞음</span>'}</td></tr>`;
+  }).join("");
+  return `<table class="rooms-t"><thead><tr><th>고사실</th><th>접수</th><th>응시</th><th>결시</th><th>미정</th><th>등록상태</th><th>합계 확인</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+async function toggleRow(i) {
+  if (openIdx === i) { openIdx = -1; renderTable(); return; }
+  openIdx = i;
+  renderTable();
+  const v = SUMMARY.venues[i];
+  if (!roomCache[v.name]) {
+    try {
+      const d = await gasGet("action=venue_rooms&venue=" + encodeURIComponent(v.name), 60000);
+      roomCache[v.name] = { rooms: d.rooms };
+    } catch (e) {
+      roomCache[v.name] = { error: e.message };
+    }
+    if (openIdx === i) { const cell = $("detail-" + i); if (cell) cell.innerHTML = detailHtml(v); }
   }
 }
 
-document.getElementById("refreshBtn").addEventListener("click", boot);
-boot();
-
-/* ---------- CSV 다운로드 (모든 탭 공통) ---------- */
-function buildCsv(header, rows) {
-  const all = [header, ...rows];
-  const csv = all.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
-  return "\uFEFF" + csv;
+function setVersionBadge() {
+  const el = $("ver");
+  if (SERVER_VER === null) { el.textContent = `대시보드 ${DASH_VERSION}`; el.classList.remove("bad"); return; }
+  const same = SERVER_VER === DASH_VERSION;
+  el.textContent = `대시보드 ${DASH_VERSION} · 서버 ${SERVER_VER}` + (same ? "" : " (서버 재배포 필요)");
+  el.classList.toggle("bad", !same);
 }
 
-async function initDownload(csvBuilder) {
-  const btn = document.getElementById("downloadBtn");
-  if (!btn) return;
-  if (!window.claude || typeof window.claude.use !== "function") return;
-  const downloads = await window.claude.use("downloads");
-  if (!downloads) return;
+/* ---------- 불러오기 ---------- */
+async function load(silent) {
+  if (!silent) { $("stamp").textContent = "불러오는 중…"; $("refresh").disabled = true; }
+  try {
+    const d = await gasGet("action=summary", 90000);
+    SUMMARY = d; SERVER_VER = d.ver || "구버전";
+    roomCache = {};
+    $("stamp").textContent = "마지막 갱신 " + new Date().toLocaleTimeString("ko-KR");
+    setVersionBadge();
+    renderTable();
+    renderDownloadBar();
+    if (openIdx >= 0 && SUMMARY.venues[openIdx]) { const i = openIdx; openIdx = -1; await toggleRow(i); }
+  } catch (e) {
+    $("stamp").textContent = "불러오기 실패(" + e.message + ")";
+    if (!SUMMARY) { $("dlMsg").textContent = "불러오지 못했어요. 새로고침을 눌러 다시 시도해 주세요."; $("dlDot").className = "dot bad"; }
+  } finally {
+    if (!silent) $("refresh").disabled = false;
+  }
+}
 
-  btn.classList.add("ready");
-  btn.onclick = async () => {
-    btn.disabled = true;
-    const original = btn.innerHTML;
-    try {
-      const { header, rows, filename } = csvBuilder();
-      const csv = buildCsv(header, rows);
-      const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-      await downloads.save({ filename: `${filename}_${today}.csv`, data: csv });
-    } catch (e) {
-      if (e && e.code !== "declined") {
-        btn.innerHTML = "다운로드 실패";
-        setTimeout(() => { btn.innerHTML = original; }, 2000);
+/* ---------- 엑셀 만들기 ---------- */
+function loadXlsx() {
+  if (window.XLSX) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let i = 0;
+    const next = () => {
+      if (window.XLSX) return resolve(true);
+      if (i >= XLSX_URLS.length) return resolve(false);
+      const s = document.createElement("script");
+      s.src = XLSX_URLS[i++];
+      s.onload = () => resolve(!!window.XLSX);
+      s.onerror = next;
+      document.head.appendChild(s);
+    };
+    next();
+  });
+}
+
+function buildRoomsAoa(rooms) {
+  const open = rooms.some(r => !r.completed || r.pending > 0);
+  const header = ["고사장", "고사실", "접수", "응시", "결시"].concat(open ? ["미정", "등록상태"] : []);
+  const rows = rooms.map(r => {
+    const base = [r.venue, fmtRoom(r.name), r.registered, r.present, r.absent];
+    return open ? base.concat([r.pending, r.completed ? "완료" : "미완료"]) : base;
+  });
+  return [header].concat(rows);
+}
+
+function buildAttAoa(rooms) {
+  const label = { p: "응시", a: "결시", n: "미정" };
+  const rows = [];
+  rooms.forEach(r => { const rn = fmtRoom(r.name); r.seats.forEach(s => rows.push([s[0], r.venue, rn, label[s[1]]])); });
+  return [["수험번호", "고사장", "고사실", "응결시"]].concat(rows);
+}
+
+function safeName(s) { return String(s).replace(/[\\/:*?"<>|]/g, "_").trim(); }
+
+function todayStr() {
+  const d = new Date(), p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate());
+}
+
+function saveCsvFallback(aoa, filename) {
+  const csv = aoa.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename.replace(/\.xlsx$/, ".csv");
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+async function startDownload(kind, force) {
+  if (busy) return;
+  busy = true;
+  const btns = [$("dlRooms"), $("dlAtt")];
+  btns.forEach(b => b.disabled = true);
+  const sub = $("dlSub");
+  try {
+    sub.textContent = "최신 현황을 확인하는 중…";
+    await load(true);                       // 눌렀을 때 기준으로 다시 확인
+    const r = readiness();
+    let forced = false;
+    if (!r.ready) {
+      if (!force) {
+        if (!window.confirm(`아직 끝나지 않은 고사장이 ${r.total - r.ok}곳 있어요.\n그래도 지금 상태로 받을까요?`)) { sub.textContent = ""; return; }
       }
-    } finally {
-      btn.disabled = false;
-      if (!btn.innerHTML.includes("실패")) btn.innerHTML = original;
+      if (!window.confirm(`미완료·불일치 ${r.total - r.ok}곳이 포함된 채로 받습니다.\n파일 이름에 "미완료포함"이 붙어요. 계속할까요?`)) { sub.textContent = ""; return; }
+      forced = true;
     }
-  };
+    sub.textContent = "서버에서 데이터를 가져오는 중… (데이터가 많으면 1분 넘게 걸릴 수 있어요)";
+    const data = await gasGet(kind === "rooms" ? "action=export_rooms" : "action=export_att", 240000);
+    sub.textContent = "엑셀 파일을 만드는 중…";
+    const aoa = kind === "rooms" ? buildRoomsAoa(data.rooms) : buildAttAoa(data.rooms);
+    const base = kind === "rooms" ? "고사실별취합" : "응결시취합";
+    const filename = `${safeName(EXAM_NAME)}_${base}_${todayStr()}${forced ? "_미완료포함" : ""}.xlsx`;
+    const ok = await loadXlsx();
+    if (ok) {
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = (kind === "rooms" ? [26, 18, 8, 8, 8, 8, 10] : [14, 26, 18, 10]).map(w => ({ wch: w }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, kind === "rooms" ? "고사실별 취합" : "응결시 취합");
+      XLSX.writeFile(wb, filename);
+      sub.innerHTML = `<span style="color:var(--ok)">${esc(filename)} 파일을 내려받았어요 (${num(aoa.length - 1)}줄)</span>`;
+    } else {
+      saveCsvFallback(aoa, filename);
+      sub.innerHTML = `<span style="color:var(--warn)">엑셀 도구를 못 불러와서 CSV로 받았어요. 엑셀에서 열면 수험번호 앞자리 0이 사라질 수 있어요.</span>`;
+    }
+  } catch (e) {
+    sub.innerHTML = `<span style="color:var(--bad)">다운로드하지 못했어요(${esc(e.message)})</span>`;
+  } finally {
+    busy = false;
+    btns.forEach(b => b.disabled = false);
+  }
 }
+
+/* ---------- 이벤트 ---------- */
+$("tb").addEventListener("click", e => {
+  const tr = e.target.closest("tr.v");
+  if (!tr) return;
+  toggleRow(parseInt(tr.dataset.i, 10));
+});
+$("refresh").addEventListener("click", () => load(false));
+$("dlRooms").addEventListener("click", () => startDownload("rooms", false));
+$("dlAtt").addEventListener("click", () => startDownload("att", false));
+
+let autoTimer = null;
+$("auto").addEventListener("change", e => {
+  clearInterval(autoTimer);
+  if (e.target.checked) autoTimer = setInterval(() => { if (!busy) load(true); }, 60000);
+});
+
+setVersionBadge();
+load(false);
 </script>
 </body>
 </html>
