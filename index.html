@@ -155,6 +155,7 @@
     color: var(--danger);
     min-height: 18px;
   }
+  .login-error-detail { font-size: 11.5px; color: var(--ink-soft); word-break: break-all; }
   .login-note {
     margin-top: 22px;
     padding-top: 18px;
@@ -341,10 +342,14 @@
     padding-bottom: 6px;
     -webkit-overflow-scrolling: touch;
   }
+  /* 어떤 고사실이든 한 칸 크기가 같도록: 기준 폭(최대 720px)을 5칸으로 나눈 크기를 한 칸으로 삼고,
+     칸 수(--cols)만큼만 폭을 차지하게 한다. 칸이 5개보다 많아서 화면에 안 들어가면 그때만 줄어든다. */
   .seat-grid {
+    --gap: 10px;
+    --cols: 5;
     display: grid;
-    gap: 10px;
-    max-width: 720px;
+    gap: var(--gap);
+    width: min(100%, calc((min(720px, 100%) - 4 * var(--gap)) / 5 * var(--cols) + (var(--cols) - 1) * var(--gap)));
   }
   .seat {
     aspect-ratio: 1 / 0.82;
@@ -363,20 +368,20 @@
     transition: transform .08s ease;
   }
   .seat:active { transform: scale(0.95); }
-  .seat .seat-no { font-size: 13px; opacity: .7; }
-  .seat .seat-exam { font-size: 15px; font-weight: 700; margin-top: 3px; letter-spacing: -0.3px; }
-  .seat .seat-status-label { font-size: 13px; font-weight: 600; margin-top: 2px; }
+  .seat { container-type: inline-size; min-width: 0; width: 100%; }
+  .seat .seat-no { font-size: clamp(8px, 12cqw, 13px); opacity: .7; }
+  .seat .seat-exam { font-size: clamp(8px, 16cqw, 15px); font-weight: 700; margin-top: 3px; letter-spacing: -0.02em; white-space: nowrap; }
+  .seat .seat-status-label { font-size: clamp(8px, 12cqw, 13px); font-weight: 600; margin-top: 2px; }
   .seat.state-empty { cursor: default; opacity: .55; }
   .seat.state-present { background: var(--present-bg); border-color: var(--present); color: var(--present); }
   .seat.state-absent { background: var(--absent-bg); border-color: var(--absent); color: var(--absent); }
 
   /* 좁은 화면(모바일)에서는 칸 개수는 그대로 두고 칸/글자 크기만 줄여서 화면에 맞춤 */
   @media (max-width: 480px) {
-    .seat-grid { gap: 6px; }
+    .seat-grid { --gap: 6px; }
     .seat { min-height: 52px; padding: 3px 2px; border-radius: 8px; border-width: 1.5px; }
-    .seat .seat-no { font-size: 9px; }
-    .seat .seat-exam { font-size: 10.5px; letter-spacing: -0.6px; margin-top: 2px; }
-    .seat .seat-status-label { font-size: 9px; margin-top: 1px; }
+    .seat .seat-exam { margin-top: 2px; }
+    .seat .seat-status-label { margin-top: 1px; }
   }
 
   .legend { display: flex; gap: 16px; margin-top: 18px; flex-wrap: wrap; }
@@ -497,7 +502,7 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v17</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v20</div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbyld7aU3KzStCwWSpKeSGsTWkr3zMaUssPvJ7dVYBb0Snw160bhjiUXnNKCYTnqTFef/exec";
@@ -513,10 +518,51 @@ let viewMode = "input"; // "input" | "review"
 let roomStates = {};  // venueName -> [ {no, examNo, status}, ... ] (고사실별로 room.name 키로 저장)
 
 async function findSupervisor(phoneLast4) {
-  const res = await fetch(`${GAS_URL}?action=login&phone=${encodeURIComponent(phoneLast4)}`);
-  if (!res.ok) throw new Error("network");
-  const data = await res.json();
+  const ctrl = new AbortController();
+  const t0 = performance.now();
+  const timer = setTimeout(() => ctrl.abort(), 25000); // 25초 넘으면 시간 초과로 처리
+  let res;
+  try {
+    res = await fetch(`${GAS_URL}?action=login&phone=${encodeURIComponent(phoneLast4)}`, { signal: ctrl.signal });
+  } catch (e) {
+    if (e && e.name === "AbortError") throw new Error("시간 초과(25초 이상 응답 없음)");
+    throw new Error("요청 차단/네트워크 오류(" + (e && e.message ? e.message : e) + ")");
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!res.ok) throw new Error("서버 응답 오류 HTTP " + res.status);
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    // 구글 로그인 화면/에러 페이지 등 JSON이 아닌 응답이 온 경우
+    const head = text.replace(/\s+/g, " ").slice(0, 60);
+    throw new Error("JSON이 아닌 응답: " + head);
+  }
+  if (data && data.error) throw new Error("서버 오류: " + data.error);
+  if (data) data._clientMs = performance.now() - t0;
   return data.found ? data : null; // { found, name, venue, rooms }
+}
+
+// 동시 접속이 몰려 일시적으로 실패해도 사용자가 다시 누르지 않도록 자동 재시도한다.
+// (번호가 등록 안 된 경우(found:false)는 실패가 아니므로 재시도하지 않는다.)
+const LOGIN_MAX_TRIES = 3;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function findSupervisorWithRetry(phone, onRetry) {
+  let lastErr;
+  for (let attempt = 1; attempt <= LOGIN_MAX_TRIES; attempt++) {
+    try {
+      return await findSupervisor(phone);
+    } catch (e) {
+      lastErr = e;
+      if (attempt < LOGIN_MAX_TRIES) {
+        if (onRetry) onRetry(attempt + 1);
+        await sleep(1000 + Math.random() * 2000 * attempt); // 사람마다 다르게 쉬어서 다시 몰리지 않게
+      }
+    }
+  }
+  throw lastErr;
 }
 
 async function syncSeatStatus(venue, roomLabel, seat) {
@@ -563,7 +609,16 @@ function clearSession() {
   try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
 }
 
+function showTiming(sup) {
+  const badge = document.querySelector(".demo-badge");
+  if (!badge || typeof sup._clientMs !== "number") return;
+  const total = (sup._clientMs / 1000).toFixed(1);
+  const server = typeof sup.ms === "number" ? ` (서버 ${(sup.ms / 1000).toFixed(1)}초)` : "";
+  badge.textContent = `v20 · 로그인 ${total}초${server}`;
+}
+
 function enterApp(sup) {
+  showTiming(sup);
   session = sup;
   saveSession(sup);
   document.getElementById("loginScreen").style.display = "none";
@@ -762,7 +817,7 @@ function renderRoom() {
       </div>
       <div class="room-head-stats">응시 <b class="present">${presentCount}</b> · 결시 <b class="absent">${absentCount}</b> · 정원 ${capacity}석</div>
     </div>
-    <div class="seat-grid-scroll"><div class="seat-grid" id="seatGrid" style="grid-template-columns: repeat(${room.cols}, 1fr); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div></div>
+    <div class="seat-grid-scroll"><div class="seat-grid" id="seatGrid" style="--cols: ${room.cols}; grid-template-columns: repeat(${room.cols}, minmax(46px, 1fr)); grid-template-rows: repeat(${room.rows}, 1fr); grid-auto-flow: column;"></div></div>
     <div class="legend">
       <div class="legend-item"><span class="legend-dot present"></span>응시</div>
       <div class="legend-item"><span class="legend-dot absent"></span>결시</div>
@@ -920,7 +975,9 @@ async function attemptLogin() {
   loginError.textContent = "";
 
   try {
-    const sup = await findSupervisor(val);
+    const sup = await findSupervisorWithRetry(val, n => {
+      loginBtn.textContent = `연결 중… (재시도 ${n}/${LOGIN_MAX_TRIES})`;
+    });
     if (!sup) {
       failCount++;
       loginError.textContent = "등록되지 않은 번호입니다. 다시 확인해 주세요.";
@@ -929,7 +986,8 @@ async function attemptLogin() {
     sup.phone = val;
     enterApp(sup);
   } catch (e) {
-    loginError.textContent = "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+    loginError.innerHTML = "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요." +
+      '<br><span class="login-error-detail">상세: ' + String(e && e.message ? e.message : e).replace(/</g, "&lt;") + '</span>';
   } finally {
     loginBtn.disabled = false;
     loginBtn.textContent = "확인";
@@ -941,7 +999,7 @@ async function attemptLogin() {
   const saved = loadSession();
   if (saved && saved.phone) {
     try {
-      const sup = await findSupervisor(saved.phone);
+      const sup = await findSupervisorWithRetry(saved.phone);
       if (sup) {
         sup.phone = saved.phone;
         enterApp(sup);
