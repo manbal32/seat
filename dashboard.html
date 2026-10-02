@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-01 10:48 -->
+<!-- make_site 1.0 · 2026-10-02 09:15 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADsP_51_261031 · 고사장 통합 현황판</title>
+<title>빅분기_test_20260905 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -82,7 +82,7 @@
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">ADsP_51_261031</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_test_20260905</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -113,12 +113,13 @@
     </table>
   </div>
 </div>
-<div class="verbadge" id="ver">대시보드 v20</div>
+<div class="verbadge" id="ver">대시보드 v21.2</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbx5Y5lr4UFdxzbufFPPpXOppVUzc3llTKvJAFxgNVznUEU6zzUDdgHQN1DEvnm5KRHMXg/exec";
-const EXAM_NAME = "ADsP_51_261031";
-const DASH_VERSION = "v20";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwUMIj7WWHggCRejubhrQ_h4LiZy3by6MxeRKlDfJMoX3KmIqUZQ8xvccEkyaJOUMkpsA/exec";
+const EXAM_NAME = "빅분기_test_20260905";
+const DASH_VERSION = "v21";
+const DASH_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
@@ -140,7 +141,7 @@ async function gasGet(query, timeoutMs) {
   const timer = setTimeout(() => ctrl.abort(), timeoutMs || 60000);
   let res;
   try {
-    res = await fetch(`${GAS_URL}?${query}`, { signal: ctrl.signal });
+    res = await fetch(`${GAS_URL}?${query}&_=${Date.now()}`, { signal: ctrl.signal });
   } catch (e) {
     if (e && e.name === "AbortError") throw new Error(`시간 초과(${Math.round((timeoutMs || 60000) / 1000)}초 이상 응답 없음)`);
     throw new Error("요청 차단/네트워크 오류(" + (e && e.message ? e.message : e) + ")");
@@ -160,11 +161,13 @@ async function gasGet(query, timeoutMs) {
 /* ---------- 상태 계산 ---------- */
 function statusOf(v) {
   const done = v.roomsDone === v.rooms;
+  const incons = (v.inconsistentRooms || 0) > 0;     // 등록완료로 표시됐는데 서버에 미정 좌석이 남은 고사실
+  const wait = ["대기", "wait"];
   return {
-    done,
-    fin: done ? ["완료", "ok"] : ["진행중", "warn"],
-    rooms: !done ? ["대기", "wait"] : ((v.mismatchRooms === 0 && v.present + v.absent === v.registered) ? ["완료", "ok"] : ["접수 불일치", "bad"]),
-    att: !done ? ["대기", "wait"] : (v.pending === 0 ? ["완료", "ok"] : ["미정 " + v.pending, "bad"])
+    done, incons,
+    fin: incons ? ["확인 필요", "bad"] : (done ? ["완료", "ok"] : ["진행중", "warn"]),
+    rooms: !done ? wait : (v.pending > 0 ? ["미정 " + v.pending, "bad"] : ((v.mismatchRooms === 0 && v.present + v.absent === v.registered) ? ["완료", "ok"] : ["접수 불일치", "bad"])),
+    att: !done ? wait : (v.pending === 0 ? ["완료", "ok"] : ["미정 " + v.pending, "bad"])
   };
 }
 function readiness() {
@@ -173,7 +176,7 @@ function readiness() {
   vs.forEach(v => {
     const s = statusOf(v);
     if (s.rooms[0] === "완료" && s.att[0] === "완료") ok++;
-    else if (!s.done) wait++;
+    else if (!s.done && !s.incons) wait++;
     else bad++;
   });
   return { total: vs.length, ok, wait, bad, ready: vs.length > 0 && ok === vs.length };
@@ -237,8 +240,9 @@ function detailHtml(v) {
   const rows = c.rooms.map(r => {
     const sum = r.present + r.absent + r.pending;
     const mism = sum !== r.registered;
+    const incons = r.completed && r.pending > 0;
     const st = r.completed ? '<span class="pill ok">완료</span>' : '<span class="pill wait">미완료</span>';
-    return `<tr><td>${esc(fmtRoom(r.name))}</td><td>${r.registered}</td><td class="n-ok">${r.present}</td><td class="n-bad">${r.absent}</td><td>${r.pending}</td><td>${st}</td><td>${mism ? `<span class="n-bad">접수 ${r.registered} ≠ 합계 ${sum}</span>` : '<span class="note">맞음</span>'}</td></tr>`;
+    return `<tr><td>${esc(fmtRoom(r.name))}</td><td>${r.registered}</td><td class="n-ok">${r.present}</td><td class="n-bad">${r.absent}</td><td>${r.pending}</td><td>${st}</td><td>${incons ? `<span class="n-bad">등록완료인데 미정 ${r.pending}석 — 감독관 확인 필요</span>` : (mism ? `<span class="n-bad">접수 ${r.registered} ≠ 합계 ${sum}</span>` : '<span class="note">맞음</span>')}</td></tr>`;
   }).join("");
   return `<table class="rooms-t"><thead><tr><th>고사실</th><th>접수</th><th>응시</th><th>결시</th><th>미정</th><th>등록상태</th><th>합계 확인</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
@@ -261,9 +265,9 @@ async function toggleRow(i) {
 
 function setVersionBadge() {
   const el = $("ver");
-  if (SERVER_VER === null) { el.textContent = `대시보드 ${DASH_VERSION}`; el.classList.remove("bad"); return; }
+  if (SERVER_VER === null) { el.textContent = `대시보드 ${DASH_VERSION}.${DASH_BUILD}`; el.classList.remove("bad"); return; }
   const same = SERVER_VER === DASH_VERSION;
-  el.textContent = `대시보드 ${DASH_VERSION} · 서버 ${SERVER_VER}` + (same ? "" : " (서버 재배포 필요)");
+  el.textContent = `대시보드 ${DASH_VERSION}.${DASH_BUILD} · 서버 ${SERVER_VER}` + (same ? "" : " (서버 재배포 필요)");
   el.classList.toggle("bad", !same);
 }
 
@@ -271,10 +275,13 @@ function setVersionBadge() {
 async function load(silent) {
   if (!silent) { $("stamp").textContent = "불러오는 중…"; $("refresh").disabled = true; }
   try {
+    const t0 = performance.now();
     const d = await gasGet("action=summary", 90000);
+    const total = ((performance.now() - t0) / 1000).toFixed(1);
     SUMMARY = d; SERVER_VER = d.ver || "구버전";
     roomCache = {};
-    $("stamp").textContent = "마지막 갱신 " + new Date().toLocaleTimeString("ko-KR");
+    const serverPart = typeof d.ms === "number" ? ` · 서버 계산 ${(d.ms / 1000).toFixed(1)}초` : "";
+    $("stamp").textContent = `마지막 갱신 ${new Date().toLocaleTimeString("ko-KR")} (응답 ${total}초${serverPart})`;
     setVersionBadge();
     renderTable();
     renderDownloadBar();
