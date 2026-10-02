@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-02 09:50 -->
+<!-- make_site 1.0 · 2026-10-02 10:19 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>빅분기_최종테스트_흐하 · 고사장 통합 현황판</title>
+<title>빅분기+최종테스트_후하 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -86,7 +86,7 @@
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_최종테스트_흐하</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기+최종테스트_후하</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -117,13 +117,13 @@
     </table>
   </div>
 </div>
-<div class="verbadge" id="ver">대시보드 v21.3</div>
+<div class="verbadge" id="ver">대시보드 v21.5</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzM_GcqSuj2H2VASZWXumVus4c7mHDe6xFJOrBHmRdDG21BbdkwcQ_6I5NuNE6MEmoVSA/exec";
-const EXAM_NAME = "빅분기_최종테스트_흐하";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyywnN-gFAsnccUY_mMvRcLxnvy_vvBdgGddFf8iU3Nn_stumW7WmR-ZgEZ9hjIpZcx/exec";
+const EXAM_NAME = "빅분기+최종테스트_후하";
 const DASH_VERSION = "v21";
-const DASH_BUILD = 3;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const DASH_BUILD = 5;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
@@ -234,13 +234,16 @@ function renderTable() {
   tb.innerHTML = html || `<tr><td colspan="8" class="empty">표시할 고사장이 없습니다.</td></tr>`;
 
   const tot = vs.reduce((a, v) => (a.reg += v.registered, a.p += v.present, a.a += v.absent, a.rd += v.roomsDone, a.rt += v.rooms, a.vd += (v.roomsDone === v.rooms ? 1 : 0), a), { reg: 0, p: 0, a: 0, rd: 0, rt: 0, vd: 0 });
+  // 응시율 = 응시 ÷ 전체 응시대상(총원). 시험 중에는 아직 등록 안 한 좌석이 있어 낮게 보이다가, 고사실이 등록될수록 올라간다.
+  const rateText = (p, total) => total > 0 ? (p / total * 100).toFixed(1) + "%" : "-";
   const card = (num, label, cls) => `<div class="sum-card ${cls || ""}"><div class="num">${num}</div><div class="label">${label}</div></div>`;
   $("summary").innerHTML =
     card(`${tot.vd}/${vs.length}`, "고사장 완료", vs.length && tot.vd === vs.length ? "ok" : "") +
     card(`${num(tot.rd)}/${num(tot.rt)}`, "고사실 등록완료", tot.rt && tot.rd === tot.rt ? "ok" : "") +
     card(num(tot.reg), "전체 응시대상") +
     card(num(tot.p), "응시", "ok") +
-    card(num(tot.a), "결시", "bad");
+    card(num(tot.a), "결시", "bad") +
+    card(rateText(tot.p, tot.reg), "응시율").replace('<div class="sum-card ', '<div title="응시 ÷ 전체 응시대상" class="sum-card ');
 }
 
 function detailHtml(v) {
