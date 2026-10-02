@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-02 09:15 -->
+<!-- make_site 1.0 · 2026-10-02 09:50 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>빅분기_test_20260905 · 고사장 통합 현황판</title>
+<title>빅분기_최종테스트_흐하 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -46,8 +46,12 @@
   .dl-sub { margin-top: 9px; font-size: 12.5px; color: var(--ink-soft); min-height: 18px; }
   .dl-sub a { color: var(--primary); cursor: pointer; text-decoration: underline; }
 
-  .summary { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); margin: 4px 0 10px; align-items: center; }
-  .summary b { color: var(--ink); font-weight: 600; }
+  .sum-cards { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 14px; }
+  .sum-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 22px; min-width: 128px; }
+  .sum-card .num { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .sum-card .label { font-size: 12.5px; color: var(--ink-soft); margin-top: 3px; }
+  .sum-card.ok .num { color: var(--ok); }
+  .sum-card.bad .num { color: var(--bad); }
   .filters { margin-left: auto; display: flex; align-items: center; gap: 12px; }
   .filters input[type=text] { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 7px 10px; font-size: 13px; width: 190px; }
 
@@ -82,7 +86,7 @@
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_test_20260905</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_최종테스트_흐하</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -104,7 +108,7 @@
     </div>
   </div>
 
-  <div class="summary" id="summary"></div>
+  <div class="sum-cards" id="summary"></div>
   <div class="tbl-wrap">
     <table>
       <colgroup><col style="width:25%"><col style="width:8%"><col style="width:10%"><col style="width:8%"><col style="width:7%"><col style="width:10%"><col style="width:16%"><col style="width:16%"></colgroup>
@@ -113,13 +117,13 @@
     </table>
   </div>
 </div>
-<div class="verbadge" id="ver">대시보드 v21.2</div>
+<div class="verbadge" id="ver">대시보드 v21.3</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwUMIj7WWHggCRejubhrQ_h4LiZy3by6MxeRKlDfJMoX3KmIqUZQ8xvccEkyaJOUMkpsA/exec";
-const EXAM_NAME = "빅분기_test_20260905";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzM_GcqSuj2H2VASZWXumVus4c7mHDe6xFJOrBHmRdDG21BbdkwcQ_6I5NuNE6MEmoVSA/exec";
+const EXAM_NAME = "빅분기_최종테스트_흐하";
 const DASH_VERSION = "v21";
-const DASH_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const DASH_BUILD = 3;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
@@ -230,7 +234,13 @@ function renderTable() {
   tb.innerHTML = html || `<tr><td colspan="8" class="empty">표시할 고사장이 없습니다.</td></tr>`;
 
   const tot = vs.reduce((a, v) => (a.reg += v.registered, a.p += v.present, a.a += v.absent, a.rd += v.roomsDone, a.rt += v.rooms, a.vd += (v.roomsDone === v.rooms ? 1 : 0), a), { reg: 0, p: 0, a: 0, rd: 0, rt: 0, vd: 0 });
-  $("summary").innerHTML = `<span>고사장 완료 <b>${tot.vd}/${vs.length}</b></span><span>고사실 등록 <b>${num(tot.rd)}/${num(tot.rt)}</b></span><span>총원 <b>${num(tot.reg)}</b></span><span>응시 <b>${num(tot.p)}</b></span><span>결시 <b>${num(tot.a)}</b></span>`;
+  const card = (num, label, cls) => `<div class="sum-card ${cls || ""}"><div class="num">${num}</div><div class="label">${label}</div></div>`;
+  $("summary").innerHTML =
+    card(`${tot.vd}/${vs.length}`, "고사장 완료", vs.length && tot.vd === vs.length ? "ok" : "") +
+    card(`${num(tot.rd)}/${num(tot.rt)}`, "고사실 등록완료", tot.rt && tot.rd === tot.rt ? "ok" : "") +
+    card(num(tot.reg), "전체 응시대상") +
+    card(num(tot.p), "응시", "ok") +
+    card(num(tot.a), "결시", "bad");
 }
 
 function detailHtml(v) {
