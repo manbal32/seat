@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-02 10:19 -->
+<!-- make_site 1.0 · 2026-10-19 08:58 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>빅분기+최종테스트_후하 · 고사장 좌석배치 관리</title>
+<title>빅분기_테스트트트 · 고사장 좌석배치 관리</title>
 <style>
   :root {
     --bg: #F5F6F8;
@@ -202,6 +202,8 @@
   .topbar-venue { font-size: 16px; font-weight: 700; }
   .topbar-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
   .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .master-bar { margin-top: 8px; }
+  .master-bar select { max-width: 100%; }
   .logout-btn {
     background: none;
     border: 1px solid var(--line);
@@ -471,7 +473,7 @@
 <!-- ============ 로그인 화면 ============ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <span class="exam-chip">빅분기+최종테스트_후하</span>
+    <span class="exam-chip">빅분기_테스트트트</span>
     <p class="login-kicker">고사장 좌석배치 관리</p>
     <h1 class="login-title">휴대전화 번호를<br>입력해 주세요</h1>
 
@@ -499,9 +501,12 @@
 <div class="app" id="app">
   <div class="topbar">
     <div>
-      <span class="exam-chip">빅분기+최종테스트_후하</span>
+      <span class="exam-chip">빅분기_테스트트트</span>
       <div class="topbar-venue" id="venueTitle">-</div>
       <div class="topbar-sub" id="supervisorLine">-</div>
+      <div class="master-bar" id="masterBar" style="display:none">
+        <select class="room-select" id="venueSelect" aria-label="고사장 선택"></select>
+      </div>
     </div>
     <div class="topbar-right">
       <span class="save-state ok" id="saveState">저장됨 ✓</span>
@@ -532,10 +537,10 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v21.2</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v22</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyywnN-gFAsnccUY_mMvRcLxnvy_vvBdgGddFf8iU3Nn_stumW7WmR-ZgEZ9hjIpZcx/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwRsel_yali9TfOfn5CiFl762q0gMnPrJ5fs7PKXM2eaXhogqYxr8o3JEqaX0ZpZDQN/exec";
 
 /* =====================================================================
    앱 로직
@@ -600,8 +605,8 @@ async function findSupervisorWithRetry(phone, onRetry) {
    - 응답을 확인하고(HTTP 상태, JSON, ok), 실패하면 자동으로 다시 보낸다.
    - 한꺼번에 여러 개를 보내 구글이 거절하지 않도록 동시에 3개까지만 보낸다.
    - '등록완료'는 그 고사실의 모든 좌석 상태를 한 번에 보내고, 서버 숫자와 화면 숫자가 같을 때만 완료로 바꾼다. */
-const INDEX_VERSION = "v21";
-const INDEX_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const INDEX_VERSION = "v22";
+const INDEX_BUILD = 3;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const SAVE_TRIES = 4;
 const SAVE_PARALLEL = 3;
 const saveQueue = [];
@@ -683,7 +688,7 @@ async function flushRoom(room) {
   const rev = room._rev;
   try {
     // 아직 손대지 않은 좌석은 미정(pending) 그대로 보낸다. 응시로 확정하는 건 '등록완료' 때뿐.
-    await queueSave(() => postJson({ type: "roomSave", venue: session.venue, roomName: room.room, seats: seatPayload(room, false), completed: false }));
+    await queueSave(() => postJson({ type: "roomSave", venue: session.venue, roomName: room.room, seats: seatPayload(room, false), completed: false, epoch: session.epoch }));
     if (room._rev === rev) room.unsaved = false;
     room.dirty = false;
   } catch (e) {
@@ -705,6 +710,7 @@ function flushAllNow() {
 
 function describeSaveError(e) {
   const m = String(e && e.message ? e.message : e);
+  if (m.includes("초기화")) return m;
   if (m.includes("unknown type")) return "서버가 예전 버전이에요. 관리자에게 알려 주세요.";
   if (m.includes("HTTP 429") || m.includes("Failed to fetch") || m.includes("JSON이 아닌") || m.includes("시간 초과")) return "서버가 바쁘거나 연결이 불안정해요. 잠시 후 '다시 저장'을 눌러 주세요. (" + m + ")";
   return m;
@@ -721,7 +727,7 @@ async function submitRoom(room) {
     try {
       const seats = seatPayload(room, true);
       const local = { present: seats.filter(x => x[1] === "present").length, absent: seats.filter(x => x[1] === "absent").length };
-      const res = await queueSave(() => postJson({ type: "roomSave", venue: session.venue, roomName: room.room, seats, completed: completing }));
+      const res = await queueSave(() => postJson({ type: "roomSave", venue: session.venue, roomName: room.room, seats, completed: completing, epoch: session.epoch }));
       if (res.pending !== 0 || res.present !== local.present || res.absent !== local.absent) {
         throw new Error(`서버에 기록된 숫자(응시 ${res.present}·결시 ${res.absent}·미정 ${res.pending})가 화면(응시 ${local.present}·결시 ${local.absent})과 달라요`);
       }
@@ -742,7 +748,7 @@ async function submitRoom(room) {
 }
 
 function noticeHtml(room) {
-  if (room.saveError) return `<div class="save-error"><b>${room.completed ? "등록 취소가" : "등록완료가"} 서버에 저장되지 않았어요.</b> ${escHtml(room.saveError)} <button class="retry-btn" id="retryBtn">다시 저장</button></div>`;
+  if (room.saveError) return `<div class="save-error"><b>${room.completed ? "등록 취소가" : "등록완료가"} 서버에 저장되지 않았어요.</b> ${escHtml(room.saveError)} ${room.saveError.includes("초기화") ? '<button class="retry-btn" id="reloadBtn">새로고침</button>' : '<button class="retry-btn" id="retryBtn">다시 저장</button>'}</div>`;
   if (room.needsRecheck) return `<div class="recheck-note">이 고사실은 등록완료로 표시돼 있지만, 서버에 확정되지 않은 좌석이 있어요. 좌석을 확인하고 '고사실 등록완료'를 다시 눌러 주세요.</div>`;
   if (room.dirty) return `<div class="recheck-note">일부 좌석 변경이 아직 서버에 저장되지 않았어요. '고사실 등록완료'를 누르면 함께 저장돼요.</div>`;
   return "";
@@ -750,6 +756,8 @@ function noticeHtml(room) {
 function bindNotice(room) {
   const btn = document.getElementById("retryBtn");
   if (btn) btn.onclick = () => submitRoom(room);
+  const rb = document.getElementById("reloadBtn");
+  if (rb) rb.onclick = () => location.reload();
 }
 // 좌석 저장이 실패했을 때 화면 전체를 다시 그리지 않고 알림 칸만 바꾼다 (누르던 버튼이 바뀌지 않게)
 function updateRoomNotice(room) {
@@ -850,7 +858,8 @@ function enterApp(sup) {
   document.getElementById("loginScreen").style.display = "none";
   document.getElementById("app").classList.add("active");
   document.getElementById("venueTitle").textContent = sup.venue;
-  document.getElementById("supervisorLine").textContent = sup.name + " 감독관으로 접속됨";
+  document.getElementById("supervisorLine").textContent = sup.name + (sup.master ? " 총괄로 접속됨" : " 감독관으로 접속됨");
+  setupMasterBar(sup);
   currentRoomIndex = 0;
   setViewMode("input");
   renderRoomTabs();
@@ -859,6 +868,42 @@ function enterApp(sup) {
   renderRoomOverview();
   renderSaveState();
 }
+
+/* ---------- 총괄: 모든 고사장 보기 ---------- */
+function setupMasterBar(sup) {
+  const bar = document.getElementById("masterBar");
+  const sel = document.getElementById("venueSelect");
+  if (!sup.master || !sup.venues || !sup.venues.length) { bar.style.display = "none"; return; }
+  sel.innerHTML = sup.venues.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join("");
+  sel.value = sup.venue;
+  bar.style.display = "";
+}
+
+async function switchVenue(name) {
+  const sel = document.getElementById("venueSelect");
+  const prev = session.venue;
+  if (name === prev) return;
+  sel.disabled = true;
+  try {
+    flushAllNow();
+    await Promise.all(getRooms().map(r => r._chain).filter(Boolean));
+    const unsaved = getRooms().filter(r => r.unsaved || r.dirty).length;
+    if (unsaved && !confirm("저장되지 않은 변경이 있어요. 그래도 이동할까요?")) { sel.value = prev; return; }
+    const t0 = performance.now();
+    const res = await fetch(`${GAS_URL}?action=venue&phone=${encodeURIComponent(session.phone)}&venue=${encodeURIComponent(name)}&_=${Date.now()}`);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = JSON.parse(await res.text());
+    if (!data || data.error || !data.rooms) throw new Error((data && data.error) || "불러오지 못했어요");
+    const sup = Object.assign({}, session, { venue: name, rooms: data.rooms, epoch: data.epoch, ms: data.ms, ver: data.ver || session.ver, _clientMs: performance.now() - t0 });
+    enterApp(sup);
+  } catch (e) {
+    sel.value = prev;
+    showToast("고사장을 불러오지 못했어요: " + escHtml(String(e && e.message ? e.message : e)));
+  } finally {
+    sel.disabled = false;
+  }
+}
+document.getElementById("venueSelect").addEventListener("change", e => switchVenue(e.target.value));
 
 function setViewMode(mode) {
   viewMode = mode;

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-02 10:19 -->
+<!-- make_site 1.0 · 2026-10-19 08:58 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>빅분기+최종테스트_후하 · 고사장 통합 현황판</title>
+<title>빅분기_테스트트트 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -80,13 +80,36 @@
   .empty { padding: 36px; text-align: center; color: var(--ink-soft); }
   .verbadge { position: fixed; right: 14px; bottom: 14px; font-size: 11px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; z-index: 20; }
   .verbadge.bad { color: var(--bad); border-color: var(--bad); }
+  .btn.danger { color: var(--bad); border-color: var(--bad); }
+  .btn.danger:hover { background: var(--bad-bg); }
+  .detail-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--surface); color: var(--ink); border-radius: 14px; padding: 18px 20px; max-width: 94vw; max-height: 90vh; overflow: auto; border: 1px solid var(--line); }
+  .modal h2 { margin: 0 0 10px; font-size: 17px; }
+  .modal .row { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; flex-wrap: wrap; }
+  .modal input[type=password], .modal input[type=text] { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 8px; padding: 9px 10px; font-size: 15px; width: 100%; margin-top: 6px; }
+  .modal .warn-t { color: var(--bad); font-size: 13.5px; line-height: 1.5; }
+  .modal .err { color: var(--bad); font-size: 13px; min-height: 18px; margin-top: 6px; }
+  .seat-modal { width: min(1100px, 94vw); }
+  .room-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .room-tabs button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 5px 10px; font-size: 12.5px; }
+  .room-tabs button.on { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+  .room-tabs button.done::after { content: " ✓"; }
+  .sgrid { display: grid; gap: 5px; margin-top: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .sseat { border: 1px solid var(--line); border-radius: 7px; padding: 5px 4px; text-align: center; font-size: 11px; min-width: 66px; background: var(--bg); color: var(--ink-soft); }
+  .sseat b { display: block; font-size: 12.5px; color: var(--ink); }
+  .sseat.present { background: var(--ok-bg); border-color: var(--ok); } .sseat.present b { color: var(--ok); }
+  .sseat.absent { background: var(--bad-bg); border-color: var(--bad); } .sseat.absent b { color: var(--bad); }
+  .sseat.empty { opacity: .45; border-style: dashed; }
+  .legend { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
 </style>
 </head>
 <body>
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기+최종테스트_후하</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_테스트트트</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -94,6 +117,7 @@
       <label><input type="checkbox" id="auto"> 1분마다 자동 새로고침</label>
       <span id="stamp"></span>
       <button class="btn" id="refresh">새로고침</button>
+      <button class="btn danger" id="resetAll">전체 초기화</button>
     </div>
   </div>
 
@@ -117,13 +141,14 @@
     </table>
   </div>
 </div>
-<div class="verbadge" id="ver">대시보드 v21.5</div>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="verbadge" id="ver">대시보드 v22.1</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyywnN-gFAsnccUY_mMvRcLxnvy_vvBdgGddFf8iU3Nn_stumW7WmR-ZgEZ9hjIpZcx/exec";
-const EXAM_NAME = "빅분기+최종테스트_후하";
-const DASH_VERSION = "v21";
-const DASH_BUILD = 5;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwRsel_yali9TfOfn5CiFl762q0gMnPrJ5fs7PKXM2eaXhogqYxr8o3JEqaX0ZpZDQN/exec";
+const EXAM_NAME = "빅분기_테스트트트";
+const DASH_VERSION = "v22";
+const DASH_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
@@ -257,7 +282,8 @@ function detailHtml(v) {
     const st = r.completed ? '<span class="pill ok">완료</span>' : '<span class="pill wait">미완료</span>';
     return `<tr><td>${esc(fmtRoom(r.name))}</td><td>${r.registered}</td><td class="n-ok">${r.present}</td><td class="n-bad">${r.absent}</td><td>${r.pending}</td><td>${st}</td><td>${incons ? `<span class="n-bad">등록완료인데 미정 ${r.pending}석 — 감독관 확인 필요</span>` : (mism ? `<span class="n-bad">접수 ${r.registered} ≠ 합계 ${sum}</span>` : '<span class="note">맞음</span>')}</td></tr>`;
   }).join("");
-  return `<table class="rooms-t"><thead><tr><th>고사실</th><th>접수</th><th>응시</th><th>결시</th><th>미정</th><th>등록상태</th><th>합계 확인</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const actions = `<div class="detail-actions"><button class="btn" data-act="seats" data-venue="${esc(v.name)}">좌석 보기</button><button class="btn danger" data-act="reset" data-venue="${esc(v.name)}">이 고사장 초기화</button></div>`;
+  return `<table class="rooms-t"><thead><tr><th>고사실</th><th>접수</th><th>응시</th><th>결시</th><th>미정</th><th>등록상태</th><th>합계 확인</th></tr></thead><tbody>${rows}</tbody></table>${actions}`;
 }
 
 async function toggleRow(i) {
@@ -305,6 +331,81 @@ async function load(silent) {
   } finally {
     if (!silent) $("refresh").disabled = false;
   }
+}
+
+
+/* ---------- 좌석 보기 / 초기화 ---------- */
+const modalBg = $("modalBg"), modalEl = $("modal");
+function openModal(html, wide) { modalEl.className = "modal" + (wide ? " seat-modal" : ""); modalEl.innerHTML = html; modalBg.classList.add("show"); }
+function closeModal() { modalBg.classList.remove("show"); modalEl.innerHTML = ""; }
+modalBg.addEventListener("mousedown", e => { if (e.target === modalBg) closeModal(); });
+
+// 이벤트 위임: 펼친 줄의 버튼 (표를 다시 그려도 동작)
+$("tb").addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]");
+  if (!b) return;
+  e.stopPropagation();
+  const venue = b.getAttribute("data-venue");
+  if (b.getAttribute("data-act") === "seats") showSeats(venue);
+  else openReset("venue", venue);
+});
+$("resetAll").addEventListener("click", () => openReset("all", ""));
+
+async function showSeats(venue) {
+  openModal(`<h2>${esc(venue)} · 좌석 보기</h2><div class="note">불러오는 중…</div>`, true);
+  let d;
+  try { d = await gasGet("action=venue_seats&venue=" + encodeURIComponent(venue), 60000); }
+  catch (e) { openModal(`<h2>${esc(venue)}</h2><div class="warn-t">불러오지 못했어요: ${esc(e.message)}</div><div class="row"><button class="btn" id="mClose">닫기</button></div>`); $("mClose").onclick = closeModal; return; }
+  const rooms = d.rooms || [];
+  let cur = 0;
+  const draw = () => {
+    const r = rooms[cur];
+    const tabs = rooms.map((x, i) => `<button class="${i === cur ? "on" : ""}${x.completed ? " done" : ""}" data-i="${i}">${esc(fmtRoom(x.name))}</button>`).join("");
+    let p = 0, a = 0, n = 0;
+    r.seats.forEach(x => { if (x.status === "present") p++; else if (x.status === "absent") a++; else if (x.status === "pending") n++; });
+    const cells = r.seats.map(x => `<div class="sseat ${x.status}"><b>${x.status === "empty" ? "-" : esc(x.examNo)}</b>${x.no}번 ${x.status === "present" ? "응시" : x.status === "absent" ? "결시" : x.status === "pending" ? "미정" : "빈자리"}</div>`).join("");
+    openModal(`<h2>${esc(venue)} · 좌석 보기 <span class="note">(읽기 전용)</span></h2>
+      <div class="room-tabs">${tabs}</div>
+      <div><b>${esc(fmtRoom(r.name))}</b> · 접수 ${r.registered} · <span class="n-ok">응시 ${p}</span> · <span class="n-bad">결시 ${a}</span> · 미정 ${n} · ${r.completed ? "등록완료" : "미완료"}</div>
+      <div class="sgrid" style="grid-template-columns:repeat(${r.cols},minmax(66px,1fr));grid-template-rows:repeat(${r.rows},auto);grid-auto-flow:column;">${cells}</div>
+      <div class="legend">칸 안의 굵은 글씨는 수험번호예요. 감독관 화면과 같은 방향(위→아래, 왼→오)으로 배치돼요.</div>
+      <div class="row"><button class="btn" id="mClose">닫기</button></div>`, true);
+    $("mClose").onclick = closeModal;
+    modalEl.querySelectorAll(".room-tabs button").forEach(b => b.onclick = () => { cur = Number(b.getAttribute("data-i")); draw(); });
+  };
+  if (!rooms.length) { openModal(`<h2>${esc(venue)}</h2><div class="note">고사실이 없어요.</div><div class="row"><button class="btn" id="mClose">닫기</button></div>`); $("mClose").onclick = closeModal; return; }
+  draw();
+}
+
+function openReset(scope, venue) {
+  const all = scope === "all";
+  const need = all ? "전체 초기화" : venue;
+  openModal(`<h2>${all ? "전체 고사장 초기화" : esc(venue) + " 초기화"}</h2>
+    <div class="warn-t">${all ? "모든 고사장" : "이 고사장"}의 응시/결시 기록과 고사실 등록완료가 전부 지워지고 '미정'으로 돌아가요.<br>지우기 전에 현재 기록을 구글시트의 '백업_…' 시트에 복사해 둬요.<br>초기화된 뒤에는 감독관이 열어 둔 예전 화면의 저장이 거절돼요(새로고침 필요).</div>
+    <label class="note" style="display:block;margin-top:12px">확인을 위해 <b>${esc(need)}</b> 을(를) 그대로 입력하세요</label>
+    <input type="text" id="rConfirm" autocomplete="off">
+    <label class="note" style="display:block;margin-top:10px">PIN</label>
+    <input type="password" id="rPin" autocomplete="off" inputmode="numeric">
+    <div class="err" id="rErr"></div>
+    <div class="row"><button class="btn" id="rCancel">취소</button><button class="btn danger" id="rGo">초기화</button></div>`);
+  $("rCancel").onclick = closeModal;
+  $("rConfirm").focus();
+  $("rGo").onclick = async () => {
+    if ($("rConfirm").value.trim() !== need) { $("rErr").textContent = "확인 문구가 달라요."; return; }
+    if (!$("rPin").value) { $("rErr").textContent = "PIN을 입력하세요."; return; }
+    $("rGo").disabled = true; $("rGo").textContent = "초기화 중… (최대 1분)";
+    try {
+      const res = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ type: "reset", scope, venue, pin: $("rPin").value }) });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const d = JSON.parse(await res.text());
+      if (!d.ok) throw new Error(d.error || "초기화하지 못했어요");
+      openModal(`<h2>초기화 완료</h2><div>${esc(d.venue)} — 초기화 전 응시 ${num(d.present)} · 결시 ${num(d.absent)} · 등록완료 고사실 ${num(d.doneRooms)}개</div><div class="note" style="margin-top:8px">백업 시트: <b>${esc(d.backup)}</b> (구글시트 아래쪽 탭)</div><div class="row"><button class="btn" id="mClose">닫기</button></div>`);
+      $("mClose").onclick = () => { closeModal(); load(); };
+    } catch (e) {
+      $("rErr").textContent = "실패: " + e.message + " (서버에 이미 반영됐을 수 있으니 새로고침으로 확인하세요)";
+      $("rGo").disabled = false; $("rGo").textContent = "초기화";
+    }
+  };
 }
 
 /* ---------- 엑셀 만들기 ---------- */
