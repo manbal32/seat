@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-19 10:56 -->
+<!-- make_site 1.0 · 2026-10-19 11:26 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>빅분기_테스트_호호 · 고사장 좌석배치 관리</title>
+<title>빅분기 테스트 · 고사장 좌석배치 관리</title>
 <style>
   :root {
     --bg: #F5F6F8;
@@ -482,7 +482,7 @@
 <!-- ============ 로그인 화면 ============ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <span class="exam-chip">빅분기_테스트_호호</span>
+    <span class="exam-chip">빅분기 테스트</span>
     <p class="login-kicker">고사장 좌석배치 관리</p>
     <h1 class="login-title">휴대전화 번호를<br>입력해 주세요</h1>
 
@@ -510,7 +510,7 @@
 <div class="app" id="app">
   <div class="topbar">
     <div>
-      <span class="exam-chip">빅분기_테스트_호호</span>
+      <span class="exam-chip">빅분기 테스트</span>
       <div class="topbar-venue" id="venueTitle">-</div>
       <div class="topbar-sub" id="supervisorLine">-</div>
       <div class="master-bar" id="masterBar" style="display:none">
@@ -546,10 +546,10 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v23</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v24</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzZhjFxgSinBEasWxz7b9vc2iFVbN0mdvd1ht5w1-Uhnpn4dYkcLHt3pd0sstwr_uuv/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyk_-opzmwxk8n7kfpaR5r21KDwCgd1MeTXYTjWGfS-sPr0QVePkhyT_u55qDYaY7Kr/exec";
 
 /* =====================================================================
    앱 로직
@@ -614,8 +614,8 @@ async function findSupervisorWithRetry(phone, onRetry) {
    - 응답을 확인하고(HTTP 상태, JSON, ok), 실패하면 자동으로 다시 보낸다.
    - 한꺼번에 여러 개를 보내 구글이 거절하지 않도록 동시에 3개까지만 보낸다.
    - '등록완료'는 그 고사실의 모든 좌석 상태를 한 번에 보내고, 서버 숫자와 화면 숫자가 같을 때만 완료로 바꾼다. */
-const INDEX_VERSION = "v23";
-const INDEX_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const INDEX_VERSION = "v24";
+const INDEX_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const SAVE_TRIES = 4;
 const SAVE_PARALLEL = 3;
 const saveQueue = [];
