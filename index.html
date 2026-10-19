@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-19 10:38 -->
+<!-- make_site 1.0 · 2026-10-19 10:56 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>빅분기_테스트_허허 · 고사장 좌석배치 관리</title>
+<title>빅분기_테스트_호호 · 고사장 좌석배치 관리</title>
 <style>
   :root {
     --bg: #F5F6F8;
@@ -420,6 +420,15 @@
     z-index: 20;
   }
 
+  .flow-bg { position: fixed; inset: 0; background: rgba(10, 14, 25, .55); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+  .flow-bg.show { display: flex; }
+  .flow-box { background: var(--surface); color: var(--ink); border-radius: 18px; padding: 24px 22px 18px; width: min(420px, 100%); max-height: 88vh; overflow: auto; text-align: center; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+  .flow-title { font-size: 20px; font-weight: 700; line-height: 1.4; }
+  .flow-sub { margin-top: 8px; color: var(--ink-soft); font-size: 14.5px; line-height: 1.6; white-space: pre-line; }
+  .flow-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+  .flow-item { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 11px 12px; font-size: 15px; }
+  .flow-main { margin-top: 16px; width: 100%; border: none; background: var(--accent); color: var(--accent-ink); border-radius: 12px; padding: 16px 14px; font-size: 17px; font-weight: 700; }
+  .flow-link { margin-top: 10px; border: none; background: none; color: var(--ink-soft); font-size: 13.5px; text-decoration: underline; padding: 8px; }
   .toast {
     position: fixed;
     left: 50%;
@@ -473,7 +482,7 @@
 <!-- ============ 로그인 화면 ============ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <span class="exam-chip">빅분기_테스트_허허</span>
+    <span class="exam-chip">빅분기_테스트_호호</span>
     <p class="login-kicker">고사장 좌석배치 관리</p>
     <h1 class="login-title">휴대전화 번호를<br>입력해 주세요</h1>
 
@@ -501,7 +510,7 @@
 <div class="app" id="app">
   <div class="topbar">
     <div>
-      <span class="exam-chip">빅분기_테스트_허허</span>
+      <span class="exam-chip">빅분기_테스트_호호</span>
       <div class="topbar-venue" id="venueTitle">-</div>
       <div class="topbar-sub" id="supervisorLine">-</div>
       <div class="master-bar" id="masterBar" style="display:none">
@@ -540,7 +549,7 @@
 <div class="demo-badge">GAS 백엔드 연동됨 · v23</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwUij3q5seLpZzjDWfPDxpcJGAmoiHjVe6SvxKyNLK6lLt7sb-NDld77zU9X4rmxhT-/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzZhjFxgSinBEasWxz7b9vc2iFVbN0mdvd1ht5w1-Uhnpn4dYkcLHt3pd0sstwr_uuv/exec";
 
 /* =====================================================================
    앱 로직
@@ -606,7 +615,7 @@ async function findSupervisorWithRetry(phone, onRetry) {
    - 한꺼번에 여러 개를 보내 구글이 거절하지 않도록 동시에 3개까지만 보낸다.
    - '등록완료'는 그 고사실의 모든 좌석 상태를 한 번에 보내고, 서버 숫자와 화면 숫자가 같을 때만 완료로 바꾼다. */
 const INDEX_VERSION = "v23";
-const INDEX_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const INDEX_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const SAVE_TRIES = 4;
 const SAVE_PARALLEL = 3;
 const saveQueue = [];
@@ -1005,34 +1014,92 @@ function showToast(html, onClick) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 4500);
 }
 
+/* ---------- 고사실 완료 안내 (가운데 창) ----------
+   서버가 '등록완료'를 확인한 뒤에만 뜨고, 버튼을 눌러야 닫혀요 (자동으로 넘어가지 않음).
+   순서대로 다음 미완료 고사실을 안내하고, 끝에 닿았는데 빠진 곳이 있으면 그곳부터 다시 순서대로 안내해요.
+   모두 완료되면 '수고하셨습니다' + 확인(전체 확인 화면으로). */
+function goRoom(idx) {
+  currentRoomIndex = idx;
+  setViewMode("input");
+  renderRoomTabs();
+  renderRoom();
+  renderRoomOverview();
+}
+
+function closeFlow() {
+  const el = document.getElementById("flowModal");
+  if (el) el.classList.remove("show");
+}
+
+function showFlow(o) {
+  let el = document.getElementById("flowModal");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "flowModal";
+    el.className = "flow-bg";
+    document.body.appendChild(el);
+  }
+  const list = (o.list || []).map((r, i) => `<button class="flow-item" data-i="${i}">${escHtml(r.label)}</button>`).join("");
+  el.innerHTML = `<div class="flow-box" role="dialog" aria-modal="true">
+      <div class="flow-title">${escHtml(o.title)}</div>
+      ${o.sub ? `<div class="flow-sub">${escHtml(o.sub)}</div>` : ""}
+      ${list ? `<div class="flow-list">${list}</div>` : ""}
+      <button class="flow-main" id="flowMain">${escHtml(o.btn)}</button>
+      ${o.stay ? `<button class="flow-link" id="flowStay">이 고사실 다시 보기</button>` : ""}
+    </div>`;
+  el.classList.add("show");
+  document.getElementById("flowMain").onclick = () => { closeFlow(); o.onMain(); };
+  const stay = document.getElementById("flowStay");
+  if (stay) stay.onclick = closeFlow;
+  el.querySelectorAll(".flow-item").forEach(b => b.onclick = () => { closeFlow(); o.list[Number(b.getAttribute("data-i"))].onPick(); });
+}
+
 function announceNextRoom(completedRoom) {
   const rooms = getRooms();
-  const completedLabel = formatRoomLabel(completedRoom.name);
-
-  // 완료한 고사실 다음 순서부터, 없으면 처음부터 한 바퀴 돌면서 미완료 고사실 탐색
   const idx = rooms.indexOf(completedRoom);
-  let next = null;
-  for (let i = 1; i <= rooms.length; i++) {
-    const cand = rooms[(idx + i) % rooms.length];
-    if (!cand.completed) { next = cand; break; }
-  }
+  const label = formatRoomLabel(completedRoom.name);
+  const p = completedRoom.seats.filter(x => x.status === "present").length;
+  const a = completedRoom.seats.filter(x => x.status === "absent").length;
+  const doneLine = `${label} 완료 ✓`;
+  const sumLine = `응시 ${p} · 결시 ${a}`;
 
-  if (!next) {
-    showToast(`${completedLabel} 완료! <span class="toast-sub">모든 고사실 등록이 완료되었습니다 🎉</span>`);
+  const incomplete = rooms.map((r, i) => ({ r, i })).filter(x => !x.r.completed);
+
+  // 모두 완료
+  if (incomplete.length === 0) {
+    showFlow({
+      title: "모든 고사실 등록이 완료됐습니다",
+      sub: `${doneLine} (${sumLine}) · 수고하셨습니다. 확인 버튼을 눌러 주세요.`,
+      btn: "확인",
+      stay: true,
+      onMain: () => setViewMode("review")
+    });
     return;
   }
 
-  const nextLabel = formatRoomLabel(next.name);
-  showToast(
-    `${completedLabel} 완료! <span class="toast-sub">다음: ${nextLabel} — 눌러서 이동</span>`,
-    () => {
-      currentRoomIndex = rooms.indexOf(next);
-      renderRoomTabs();
-      renderRoom();
-      renderRoomOverview();
-      document.getElementById("toast").classList.remove("show");
-    }
-  );
+  // 순서대로: 완료한 고사실 뒤쪽의 다음 미완료 고사실
+  const after = incomplete.find(x => x.i > idx);
+  if (after) {
+    showFlow({
+      title: doneLine,
+      sub: sumLine,
+      btn: `다음: ${formatRoomLabel(after.r.name)}로 이동`,
+      stay: true,
+      onMain: () => goRoom(after.i)
+    });
+    return;
+  }
+
+  // 끝까지 왔는데 앞쪽에 빠진 곳이 있음 -> 그곳부터 다시 순서대로
+  const first = incomplete[0];
+  showFlow({
+    title: "마지막 고사실까지 왔어요",
+    sub: `${doneLine} (${sumLine})\n아직 완료하지 않은 고사실이 ${incomplete.length}개 있어요.`,
+    list: incomplete.map(x => ({ label: formatRoomLabel(x.r.name), onPick: () => goRoom(x.i) })),
+    btn: `${formatRoomLabel(first.r.name)}로 이동`,
+    stay: true,
+    onMain: () => goRoom(first.i)
+  });
 }
 
 function formatRoomLabel(name) {
