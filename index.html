@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-19 08:58 -->
+<!-- make_site 1.0 · 2026-10-19 10:38 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>빅분기_테스트트트 · 고사장 좌석배치 관리</title>
+<title>빅분기_테스트_허허 · 고사장 좌석배치 관리</title>
 <style>
   :root {
     --bg: #F5F6F8;
@@ -473,7 +473,7 @@
 <!-- ============ 로그인 화면 ============ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <span class="exam-chip">빅분기_테스트트트</span>
+    <span class="exam-chip">빅분기_테스트_허허</span>
     <p class="login-kicker">고사장 좌석배치 관리</p>
     <h1 class="login-title">휴대전화 번호를<br>입력해 주세요</h1>
 
@@ -501,7 +501,7 @@
 <div class="app" id="app">
   <div class="topbar">
     <div>
-      <span class="exam-chip">빅분기_테스트트트</span>
+      <span class="exam-chip">빅분기_테스트_허허</span>
       <div class="topbar-venue" id="venueTitle">-</div>
       <div class="topbar-sub" id="supervisorLine">-</div>
       <div class="master-bar" id="masterBar" style="display:none">
@@ -537,10 +537,10 @@
   </div>
 </div>
 
-<div class="demo-badge">GAS 백엔드 연동됨 · v22</div>
+<div class="demo-badge">GAS 백엔드 연동됨 · v23</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwRsel_yali9TfOfn5CiFl762q0gMnPrJ5fs7PKXM2eaXhogqYxr8o3JEqaX0ZpZDQN/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwUij3q5seLpZzjDWfPDxpcJGAmoiHjVe6SvxKyNLK6lLt7sb-NDld77zU9X4rmxhT-/exec";
 
 /* =====================================================================
    앱 로직
@@ -605,8 +605,8 @@ async function findSupervisorWithRetry(phone, onRetry) {
    - 응답을 확인하고(HTTP 상태, JSON, ok), 실패하면 자동으로 다시 보낸다.
    - 한꺼번에 여러 개를 보내 구글이 거절하지 않도록 동시에 3개까지만 보낸다.
    - '등록완료'는 그 고사실의 모든 좌석 상태를 한 번에 보내고, 서버 숫자와 화면 숫자가 같을 때만 완료로 바꾼다. */
-const INDEX_VERSION = "v22";
-const INDEX_BUILD = 3;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const INDEX_VERSION = "v23";
+const INDEX_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const SAVE_TRIES = 4;
 const SAVE_PARALLEL = 3;
 const saveQueue = [];
@@ -1243,6 +1243,8 @@ async function attemptLogin() {
     }
     sup.phone = val;
     enterApp(sup);
+    // 로그인 기록(직접 입력해서 들어온 경우만). 실패해도 아무 영향 없음.
+    try { fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ type: "loginLog", phone: val }), keepalive: true }).catch(() => {}); } catch (e) {}
   } catch (e) {
     loginError.innerHTML = "서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요." +
       '<br><span class="login-error-detail">상세: ' + String(e && e.message ? e.message : e).replace(/</g, "&lt;") + '</span>';

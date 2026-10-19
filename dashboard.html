@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-19 08:58 -->
+<!-- make_site 1.0 · 2026-10-19 10:38 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>빅분기_테스트트트 · 고사장 통합 현황판</title>
+<title>빅분기_테스트_허허 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -102,6 +102,19 @@
   .sseat.present { background: var(--ok-bg); border-color: var(--ok); } .sseat.present b { color: var(--ok); }
   .sseat.absent { background: var(--bad-bg); border-color: var(--bad); } .sseat.absent b { color: var(--bad); }
   .sseat.empty { opacity: .45; border-style: dashed; }
+  .hint-box { background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 12px; }
+  .hint-row { display: flex; gap: 10px; align-items: baseline; font-size: 15px; padding: 2px 0; }
+  .hint-k { color: var(--ink-soft); font-size: 12.5px; min-width: 64px; }
+  .tabs { display: flex; gap: 6px; margin: 0 0 8px; }
+  .tab { border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); border-radius: 8px 8px 0 0; padding: 7px 18px; font-size: 14px; }
+  .tab.on { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); font-weight: 600; }
+  .ref-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 6px 0 12px; flex-wrap: wrap; }
+  .ref-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .ref-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+  .ref-card h3 { margin: 0 0 8px; font-size: 14.5px; }
+  .ref-row { display: flex; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; }
+  .ref-k { flex: none; width: 110px; color: var(--ink-soft); }
+  .ref-v { flex: 1; }
   .legend { font-size: 12.5px; color: var(--ink-soft); margin-top: 8px; }
 </style>
 </head>
@@ -109,7 +122,7 @@
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_테스트트트</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기_테스트_허허</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -121,6 +134,8 @@
     </div>
   </div>
 
+  <div class="tabs"><button class="tab on" id="tabMain">현황</button><button class="tab" id="tabRef">기준표</button></div>
+  <div id="viewMain">
   <div class="dl-bar">
     <div class="dl-card">
       <div class="dl-msg"><span class="dot" id="dlDot"></span><span id="dlMsg">불러오는 중…</span></div>
@@ -140,14 +155,17 @@
       <tbody id="tb"></tbody>
     </table>
   </div>
+  </div>
+  <div id="viewRef" style="display:none"></div>
 </div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
-<div class="verbadge" id="ver">대시보드 v22.1</div>
+<div class="verbadge" id="ver">대시보드 v23.1</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbwRsel_yali9TfOfn5CiFl762q0gMnPrJ5fs7PKXM2eaXhogqYxr8o3JEqaX0ZpZDQN/exec";
-const EXAM_NAME = "빅분기_테스트트트";
-const DASH_VERSION = "v22";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwUij3q5seLpZzjDWfPDxpcJGAmoiHjVe6SvxKyNLK6lLt7sb-NDld77zU9X4rmxhT-/exec";
+const EXAM_NAME = "빅분기_테스트_허허";
+const RESET_PIN_HINT = "123456";   // 사이트만들기에서 넣은 PIN (비어 있으면 안내 없이 직접 입력)
+const DASH_VERSION = "v23";
 const DASH_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
@@ -382,20 +400,25 @@ function openReset(scope, venue) {
   const need = all ? "전체 초기화" : venue;
   openModal(`<h2>${all ? "전체 고사장 초기화" : esc(venue) + " 초기화"}</h2>
     <div class="warn-t">${all ? "모든 고사장" : "이 고사장"}의 응시/결시 기록과 고사실 등록완료가 전부 지워지고 '미정'으로 돌아가요.<br>지우기 전에 현재 기록을 구글시트의 '백업_…' 시트에 복사해 둬요.<br>초기화된 뒤에는 감독관이 열어 둔 예전 화면의 저장이 거절돼요(새로고침 필요).</div>
-    <label class="note" style="display:block;margin-top:12px">확인을 위해 <b>${esc(need)}</b> 을(를) 그대로 입력하세요</label>
-    <input type="text" id="rConfirm" autocomplete="off">
-    <label class="note" style="display:block;margin-top:10px">PIN</label>
-    <input type="password" id="rPin" autocomplete="off" inputmode="numeric">
+    <div class="hint-box">
+      <div class="hint-row"><span class="hint-k">${all ? "확인 문구" : "고사장 이름"}</span><b>${esc(need)}</b></div>
+      ${RESET_PIN_HINT ? `<div class="hint-row"><span class="hint-k">PIN</span><b>${esc(RESET_PIN_HINT)}</b></div>` : ""}
+    </div>
+    <div class="note" style="margin-top:10px">위 내용을 그대로 아래에 입력하세요${RESET_PIN_HINT ? "" : " (PIN은 Code만들기 화면에 나온 6자리)"}</div>
+    <input type="text" id="rWho" autocomplete="off" placeholder="작업자 이름 (기록에 남아요)" maxlength="30">
+    <input type="text" id="rConfirm" autocomplete="off" placeholder="${all ? "확인 문구" : "고사장 이름"}">
+    <input type="text" id="rPin" autocomplete="off" inputmode="numeric" placeholder="PIN" maxlength="12">
     <div class="err" id="rErr"></div>
     <div class="row"><button class="btn" id="rCancel">취소</button><button class="btn danger" id="rGo">초기화</button></div>`);
   $("rCancel").onclick = closeModal;
-  $("rConfirm").focus();
+  $("rWho").focus();
   $("rGo").onclick = async () => {
+    if (!$("rWho").value.trim()) { $("rErr").textContent = "작업자 이름을 입력하세요."; return; }
     if ($("rConfirm").value.trim() !== need) { $("rErr").textContent = "확인 문구가 달라요."; return; }
     if (!$("rPin").value) { $("rErr").textContent = "PIN을 입력하세요."; return; }
     $("rGo").disabled = true; $("rGo").textContent = "초기화 중… (최대 1분)";
     try {
-      const res = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ type: "reset", scope, venue, pin: $("rPin").value }) });
+      const res = await fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ type: "reset", scope, venue, pin: $("rPin").value, who: $("rWho").value.trim() }) });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const d = JSON.parse(await res.text());
       if (!d.ok) throw new Error(d.error || "초기화하지 못했어요");
@@ -407,6 +430,87 @@ function openReset(scope, venue) {
     }
   };
 }
+
+
+/* ---------- 기준표 탭 ---------- */
+const CHANGELOG = [
+  ["v23", "기준표 탭 · 로그인 기록(매핑 시트) · 초기화 작업자 기록"],
+  ["v22", "총괄 로그인 · 좌석 보기 · 초기화(PIN·백업·예전 화면 저장 거절)"],
+  ["v21", "저장 신뢰성: 서버가 확인해야 완료 · 고사실 단위 한 번 저장 · '확인 필요' 표시"]
+];
+const RULE_CARDS = [
+  { title: "판정 기준", rows: [
+    ["응시율", "응시 ÷ 전체 응시대상 (시험 중에는 아직 등록 안 한 좌석 때문에 낮게 보여요)"],
+    ["고사장 완료", "그 고사장의 모든 고사실이 '등록완료'일 때"],
+    ["확인 필요", "등록완료인데 서버에는 미정(미확정) 좌석이 남은 고사실 → 감독관 확인 필요"],
+    ["접수 불일치", "접수 인원 ≠ 응시+결시+미정 합계"],
+    ["다운로드", "모든 고사장이 완료이고 정합 문제가 없을 때만 열려요 (급하면 '미완료 포함' 가능, 두 번 확인)"]
+  ]},
+  { title: "로그인 · 권한", rows: [
+    ["감독관", "휴대전화 010을 뺀 8자리. 본인 고사장만 열림"],
+    ["총괄", "본부감독 탭의 '역할'에 '총괄'이 들어간 사람. 모든 고사장 선택 가능 (기본은 엑셀에 적힌 본인 고사장)"],
+    ["대시보드", "로그인 없음. 주소를 아는 사람은 볼 수 있어요 → 직원에게만 공유"],
+    ["기록", "직접 입력해서 로그인하면 매핑 시트에 최근 시각·횟수가 갱신돼요"]
+  ]},
+  { title: "저장 · 초기화", rows: [
+    ["좌석 저장", "좌석을 다 누르고 1.5초 쉬면 고사실 단위로 한 번에 저장. 서버가 확인해야 '등록완료'"],
+    ["미정 좌석", "미정이 남아 있으면 서버가 등록완료를 받아주지 않음"],
+    ["초기화", "고사장별/전체. 확인 문구 + PIN + 작업자 이름 필요. PIN 5회 오류 시 10분 잠금"],
+    ["초기화 안전장치", "지우기 전 '백업_날짜시간' 시트에 복사 · '초기화기록' 시트에 작업자 포함 기록 · 초기화 뒤 예전 화면의 저장은 거절"]
+  ]},
+  { title: "알려진 한계", rows: [
+    ["보안", "웹앱 주소가 화면에 들어 있어요. 로그인 시도 제한은 화면에서만 걸려요. 내부 운영용 전제"],
+    ["동시 접속", "구글 한도 동시 실행 약 30건. 몰리면 화면이 자동 재시도(느려질 수 있음)"],
+    ["다시 만들기", "시험 시작 후 setupInitialData 를 다시 실행하면 입력 기록이 지워져요"],
+    ["복구", "초기화 백업은 시트에 남지만 자동 복구 기능은 없어요"]
+  ]}
+];
+
+function metaCard() {
+  const m = SUMMARY && SUMMARY.meta;
+  if (!m) return { title: "이 시험 정보", rows: [["시험", EXAM_NAME], ["만든 시점 정보", "서버가 v23이 아니거나 아직 불러오지 못했어요"]] };
+  const vs = SUMMARY.venues || [];
+  const now = { venues: vs.length, rooms: vs.reduce((a, v) => a + v.rooms, 0), registered: vs.reduce((a, v) => a + v.registered, 0) };
+  const cmp = (label, was, cur) => [label, `${num(was)} (만들 때) / ${num(cur)} (지금 서버)` + (Number(was) === Number(cur) ? " ✓" : " ⚠ 다름")];
+  return { title: "이 시험 정보", rows: [
+    ["시험", EXAM_NAME],
+    ["엑셀 파일", m.excel], ["만든 시각", m.generated + " · 도구 " + m.tool],
+    cmp("고사장", m.venues, now.venues), cmp("고사실", m.rooms, now.rooms), cmp("전체 응시대상(접수)", m.registered, now.registered),
+    ["좌석 행(빈자리 포함)", num(m.seats)], ["감독관 / 총괄", `${num(m.supervisors)}명 / ${num(m.masters)}명`]
+  ]};
+}
+
+function refText() {
+  const cards = [metaCard()].concat(RULE_CARDS);
+  let t = `# ${EXAM_NAME} 기준표\n\n`;
+  cards.forEach(c => { t += `## ${c.title}\n` + c.rows.map(r => `- ${r[0]}: ${r[1]}`).join("\n") + "\n\n"; });
+  t += "## 변경 이력\n" + CHANGELOG.map(r => `- ${r[0]}: ${r[1]}`).join("\n") + "\n";
+  return t;
+}
+
+function renderRef() {
+  const cards = [metaCard()].concat(RULE_CARDS);
+  const box = c => `<div class="ref-card"><h3>${esc(c.title)}</h3>${c.rows.map(r => `<div class="ref-row"><span class="ref-k">${esc(r[0])}</span><span class="ref-v">${esc(r[1])}</span></div>`).join("")}</div>`;
+  $("viewRef").innerHTML = `<div class="ref-top"><div class="note">이 화면이 이 시스템의 기준이에요. 기준을 바꾸고 싶으면 이 내용을 복사해서 요청과 함께 전달하세요.</div><button class="btn" id="copyRef">기준표 복사</button></div>
+    <div class="ref-grid">${cards.map(box).join("")}</div>
+    <div class="ref-card"><h3>변경 이력</h3>${CHANGELOG.map(r => `<div class="ref-row"><span class="ref-k">${esc(r[0])}</span><span class="ref-v">${esc(r[1])}</span></div>`).join("")}</div>`;
+  $("copyRef").onclick = async () => {
+    const t = refText();
+    try { await navigator.clipboard.writeText(t); }
+    catch (e) { const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); } catch (e2) {} ta.remove(); }
+    $("copyRef").textContent = "복사됐어요 ✓"; setTimeout(() => { const b = $("copyRef"); if (b) b.textContent = "기준표 복사"; }, 2000);
+  };
+}
+
+function showTab(name) {
+  $("viewMain").style.display = name === "main" ? "" : "none";
+  $("viewRef").style.display = name === "ref" ? "" : "none";
+  $("tabMain").classList.toggle("on", name === "main");
+  $("tabRef").classList.toggle("on", name === "ref");
+  if (name === "ref") renderRef();
+}
+$("tabMain").onclick = () => showTab("main");
+$("tabRef").onclick = () => showTab("ref");
 
 /* ---------- 엑셀 만들기 ---------- */
 function loadXlsx() {
