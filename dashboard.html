@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-23 10:40 -->
+<!-- make_site 1.0 · 2026-10-23 13:05 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADsP_20261023 · 고사장 통합 현황판</title>
+<title>51_ADSP_20261031 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -122,7 +122,7 @@
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">ADsP_20261023</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">51_ADSP_20261031</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -159,14 +159,14 @@
   <div id="viewRef" style="display:none"></div>
 </div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
-<div class="verbadge" id="ver">대시보드 v24.2</div>
+<div class="verbadge" id="ver">대시보드 v24.3</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyTOFuoKtAY_7fv40cgQU7X6RKHbVzFO6U--mEcpisifAhTdgw_KlXFp2-DYKPaWJTBtQ/exec";
-const EXAM_NAME = "ADsP_20261023";
-const RESET_PIN_HINT = "123456";   // 사이트만들기에서 넣은 PIN (비어 있으면 안내 없이 직접 입력)
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwsRTW1o7YDCM0he2ZsiiL7Wc5GuPTIEBZnqSLgl5Uu4t0_M6Fw1Bvdi5IXgSsjcgvvuw/exec";
+const EXAM_NAME = "51_ADSP_20261031";
+const RESET_PIN_HINT = "";   // 사이트만들기에서 넣은 PIN (비어 있으면 안내 없이 직접 입력)
 const DASH_VERSION = "v24";
-const DASH_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const DASH_BUILD = 3;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
@@ -439,6 +439,10 @@ function openReset(scope, venue) {
 /* ---------- 기준표 탭 ---------- */
 const CHANGELOG = [
  [
+  "v24.3",
+  "책상배열은 적힌 그대로 그리고 모자라는 자리는 빈칸으로 둠 · 정원≠칸수×좌석수 고사실 알림 (서버 v24 그대로, Code.gs 다시 만들어 setupInitialData 필요)"
+ ],
+ [
   "v24.2",
   "엑셀 원본(ADsP 형식)을 정리 없이 읽기 · 합계 줄 비교 · 총괄 고사장 선택 화면(서버 v24 그대로)"
  ],
@@ -499,6 +503,10 @@ const RULE_CARDS = [
    [
     "층",
     "'강의실'(층) 열이 비어 있으면 고사실 이름만 표시(예: 1고사실)"
+   ],
+   [
+    "책상배열",
+    "적힌 그대로 그린다: 'N(A행 X B열)'은 A칸 × 칸당 B석. 수험번호가 모자라는 자리(접수<정원, 정원<A×B)는 빈칸으로 둔다(빈칸은 누를 수 없고 집계에 안 들어감, 번호 순서 끝에 놓임). 정원≠A×B인 고사실은 만들 때 알림 목록으로 보여 현장 배치와 맞는지 확인"
    ],
    [
     "본부감독 탭",
