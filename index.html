@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-19 11:26 -->
+<!-- make_site 1.0 · 2026-10-23 10:40 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>빅분기 테스트 · 고사장 좌석배치 관리</title>
+<title>ADsP_20261023 · 고사장 좌석배치 관리</title>
 <style>
   :root {
     --bg: #F5F6F8;
@@ -203,7 +203,17 @@
   .topbar-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
   .topbar-right { display: flex; align-items: center; gap: 14px; }
   .master-bar { margin-top: 8px; }
-  .master-bar select { max-width: 100%; }
+  .venue-change { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+  .pick-card { width: min(520px, 100%); }
+  .pick-search { width: 100%; text-align: left; letter-spacing: normal; font-size: 16px; }
+  .pick-count { margin-top: 8px; font-size: 12.5px; color: var(--ink-soft); text-align: right; }
+  .pick-list { margin-top: 6px; max-height: 52vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+  .pick-list.busy { opacity: .5; pointer-events: none; }
+  .pick-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 10px; padding: 13px 14px; font-size: 15.5px; }
+  .pick-item:active { background: var(--primary-soft); }
+  .pick-badge { flex: none; font-size: 12.5px; color: var(--ink-soft); background: var(--bg); border-radius: 999px; padding: 2px 9px; }
+  .pick-badge.done { color: var(--present); background: var(--present-bg); font-weight: 600; }
+  .pick-empty { padding: 18px; text-align: center; color: var(--ink-soft); }
   .logout-btn {
     background: none;
     border: 1px solid var(--line);
@@ -482,7 +492,7 @@
 <!-- ============ 로그인 화면 ============ -->
 <div class="login-screen" id="loginScreen">
   <div class="login-card">
-    <span class="exam-chip">빅분기 테스트</span>
+    <span class="exam-chip">ADsP_20261023</span>
     <p class="login-kicker">고사장 좌석배치 관리</p>
     <h1 class="login-title">휴대전화 번호를<br>입력해 주세요</h1>
 
@@ -506,15 +516,29 @@
   </div>
 </div>
 
+<!-- ============ 총괄: 고사장 선택 ============ -->
+<div class="login-screen" id="pickScreen" style="display:none">
+  <div class="login-card pick-card">
+    <span class="exam-chip">ADsP_20261023</span>
+    <p class="login-kicker" id="pickName">총괄</p>
+    <h1 class="login-title">고사장을 선택하세요</h1>
+    <input id="pickSearch" class="phone-input pick-search" type="search" placeholder="고사장 이름 검색" autocomplete="off">
+    <div class="pick-count" id="pickCount"></div>
+    <div class="pick-list" id="pickList"></div>
+    <p class="login-error" id="pickError"></p>
+    <button class="logout-btn" id="pickLogout" style="margin-top:8px">로그아웃</button>
+  </div>
+</div>
+
 <!-- ============ 대시보드 ============ -->
 <div class="app" id="app">
   <div class="topbar">
     <div>
-      <span class="exam-chip">빅분기 테스트</span>
+      <span class="exam-chip">ADsP_20261023</span>
       <div class="topbar-venue" id="venueTitle">-</div>
       <div class="topbar-sub" id="supervisorLine">-</div>
       <div class="master-bar" id="masterBar" style="display:none">
-        <select class="room-select" id="venueSelect" aria-label="고사장 선택"></select>
+        <button class="venue-change" id="venueChange">고사장 변경</button>
       </div>
     </div>
     <div class="topbar-right">
@@ -549,7 +573,7 @@
 <div class="demo-badge">GAS 백엔드 연동됨 · v24</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyk_-opzmwxk8n7kfpaR5r21KDwCgd1MeTXYTjWGfS-sPr0QVePkhyT_u55qDYaY7Kr/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyTOFuoKtAY_7fv40cgQU7X6RKHbVzFO6U--mEcpisifAhTdgw_KlXFp2-DYKPaWJTBtQ/exec";
 
 /* =====================================================================
    앱 로직
@@ -615,7 +639,7 @@ async function findSupervisorWithRetry(phone, onRetry) {
    - 한꺼번에 여러 개를 보내 구글이 거절하지 않도록 동시에 3개까지만 보낸다.
    - '등록완료'는 그 고사실의 모든 좌석 상태를 한 번에 보내고, 서버 숫자와 화면 숫자가 같을 때만 완료로 바꾼다. */
 const INDEX_VERSION = "v24";
-const INDEX_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const INDEX_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const SAVE_TRIES = 4;
 const SAVE_PARALLEL = 3;
 const saveQueue = [];
@@ -865,6 +889,7 @@ function enterApp(sup) {
   session = sup;
   saveSession(sup);
   document.getElementById("loginScreen").style.display = "none";
+  hidePicker();
   document.getElementById("app").classList.add("active");
   document.getElementById("venueTitle").textContent = sup.venue;
   document.getElementById("supervisorLine").textContent = sup.name + (sup.master ? " 총괄로 접속됨" : " 감독관으로 접속됨");
@@ -878,41 +903,101 @@ function enterApp(sup) {
   renderSaveState();
 }
 
-/* ---------- 총괄: 모든 고사장 보기 ---------- */
+/* ---------- 총괄: 고사장 선택 화면 ----------
+   총괄은 로그인하면 먼저 고사장 목록이 뜨고, 하나를 눌러야 입장해요 (엑셀에 적힌 고사장으로 바로 가지 않음).
+   입장한 뒤에도 '고사장 변경' 버튼으로 이 화면으로 돌아와요. */
+let masterInfo = null;       // { phone, name, venues, ver }
+let venueProgress = null;    // 고사장 이름 -> { rooms, roomsDone }  (뒤에서 불러와 채움)
+
+function hidePicker() { const el = document.getElementById("pickScreen"); if (el) el.style.display = "none"; }
+
 function setupMasterBar(sup) {
   const bar = document.getElementById("masterBar");
-  const sel = document.getElementById("venueSelect");
-  if (!sup.master || !sup.venues || !sup.venues.length) { bar.style.display = "none"; return; }
-  sel.innerHTML = sup.venues.map(v => `<option value="${escHtml(v)}">${escHtml(v)}</option>`).join("");
-  sel.value = sup.venue;
-  bar.style.display = "";
+  bar.style.display = (sup.master && sup.venues && sup.venues.length) ? "" : "none";
 }
 
-async function switchVenue(name) {
-  const sel = document.getElementById("venueSelect");
-  const prev = session.venue;
-  if (name === prev) return;
-  sel.disabled = true;
+function afterLogin(sup) {
+  if (sup.master && sup.venues && sup.venues.length) {
+    masterInfo = { phone: sup.phone, name: sup.name, venues: sup.venues, ver: sup.ver, _clientMs: sup._clientMs, ms: sup.ms };
+    showPicker();
+  } else {
+    masterInfo = null;
+    enterApp(sup);
+  }
+}
+
+function pickRowHtml(v) {
+  const p = venueProgress && venueProgress[v];
+  let badge = "";
+  if (p) badge = `<span class="pick-badge ${p.roomsDone === p.rooms ? "done" : ""}">${p.roomsDone === p.rooms ? "완료" : `${p.roomsDone}/${p.rooms}`}</span>`;
+  return `<button class="pick-item" data-v="${escHtml(v)}"><span>${escHtml(v)}</span>${badge}</button>`;
+}
+
+function renderPickList() {
+  const q = (document.getElementById("pickSearch").value || "").trim().replace(/\s+/g, "");
+  const list = masterInfo.venues.filter(v => !q || v.replace(/\s+/g, "").includes(q));
+  const box = document.getElementById("pickList");
+  box.innerHTML = list.length ? list.map(pickRowHtml).join("") : `<div class="pick-empty">검색 결과가 없어요</div>`;
+  box.querySelectorAll(".pick-item").forEach(b => b.onclick = () => openVenue(b.getAttribute("data-v")));
+  document.getElementById("pickCount").textContent = `${list.length}/${masterInfo.venues.length}곳`;
+}
+
+async function loadVenueProgress() {
   try {
-    flushAllNow();
-    await Promise.all(getRooms().map(r => r._chain).filter(Boolean));
-    const unsaved = getRooms().filter(r => r.unsaved || r.dirty).length;
-    if (unsaved && !confirm("저장되지 않은 변경이 있어요. 그래도 이동할까요?")) { sel.value = prev; return; }
+    const res = await fetch(`${GAS_URL}?action=summary&_=${Date.now()}`);
+    const d = JSON.parse(await res.text());
+    if (d && d.venues) {
+      venueProgress = {};
+      d.venues.forEach(v => { venueProgress[v.name] = { rooms: v.rooms, roomsDone: v.roomsDone }; });
+      if (document.getElementById("pickScreen").style.display !== "none") renderPickList();
+    }
+  } catch (e) { /* 진행 상태는 부가 정보 - 실패해도 선택은 가능 */ }
+}
+
+function showPicker() {
+  document.getElementById("loginScreen").style.display = "none";
+  document.getElementById("app").classList.remove("active");
+  const el = document.getElementById("pickScreen");
+  el.style.display = "flex";
+  document.getElementById("pickName").textContent = masterInfo.name + " 총괄";
+  document.getElementById("pickError").textContent = "";
+  document.getElementById("pickSearch").value = "";
+  renderPickList();
+  loadVenueProgress();
+}
+
+async function openVenue(name) {
+  const err = document.getElementById("pickError");
+  const box = document.getElementById("pickList");
+  err.textContent = "";
+  box.classList.add("busy");
+  try {
     const t0 = performance.now();
-    const res = await fetch(`${GAS_URL}?action=venue&phone=${encodeURIComponent(session.phone)}&venue=${encodeURIComponent(name)}&_=${Date.now()}`);
+    const res = await fetch(`${GAS_URL}?action=venue&phone=${encodeURIComponent(masterInfo.phone)}&venue=${encodeURIComponent(name)}&_=${Date.now()}`);
     if (!res.ok) throw new Error("HTTP " + res.status);
     const data = JSON.parse(await res.text());
     if (!data || data.error || !data.rooms) throw new Error((data && data.error) || "불러오지 못했어요");
-    const sup = Object.assign({}, session, { venue: name, rooms: data.rooms, epoch: data.epoch, ms: data.ms, ver: data.ver || session.ver, _clientMs: performance.now() - t0 });
-    enterApp(sup);
+    hidePicker();
+    enterApp({ phone: masterInfo.phone, name: masterInfo.name, master: true, venues: masterInfo.venues, venue: name,
+               rooms: data.rooms, epoch: data.epoch, ms: data.ms, ver: data.ver || masterInfo.ver, _clientMs: performance.now() - t0 });
   } catch (e) {
-    sel.value = prev;
-    showToast("고사장을 불러오지 못했어요: " + escHtml(String(e && e.message ? e.message : e)));
+    err.textContent = "고사장을 불러오지 못했어요: " + String(e && e.message ? e.message : e) + " (다시 눌러 주세요)";
   } finally {
-    sel.disabled = false;
+    box.classList.remove("busy");
   }
 }
-document.getElementById("venueSelect").addEventListener("change", e => switchVenue(e.target.value));
+
+async function changeVenue() {
+  flushAllNow();
+  await Promise.all(getRooms().map(r => r._chain).filter(Boolean));
+  const unsaved = getRooms().filter(r => r.unsaved || r.dirty).length;
+  if (unsaved && !confirm("저장되지 않은 변경이 있어요. 그래도 고사장을 바꿀까요?")) return;
+  session = null;
+  showPicker();
+}
+document.getElementById("venueChange").addEventListener("click", changeVenue);
+document.getElementById("pickSearch").addEventListener("input", () => { if (masterInfo) renderPickList(); });
+document.getElementById("pickLogout").addEventListener("click", () => { masterInfo = null; exitApp(); });
 
 function setViewMode(mode) {
   viewMode = mode;
@@ -969,6 +1054,7 @@ function renderReviewTable() {
 
 function exitApp() {
   session = null;
+  hidePicker();
   clearSession();
   document.getElementById("app").classList.remove("active");
   document.getElementById("loginScreen").style.display = "flex";
@@ -1309,7 +1395,7 @@ async function attemptLogin() {
       return;
     }
     sup.phone = val;
-    enterApp(sup);
+    afterLogin(sup);
     // 로그인 기록(직접 입력해서 들어온 경우만). 실패해도 아무 영향 없음.
     try { fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ type: "loginLog", phone: val }), keepalive: true }).catch(() => {}); } catch (e) {}
   } catch (e) {
@@ -1329,7 +1415,7 @@ async function attemptLogin() {
       const sup = await findSupervisorWithRetry(saved.phone);
       if (sup) {
         sup.phone = saved.phone;
-        enterApp(sup);
+        afterLogin(sup);
         return;
       }
     } catch (e) { /* 조회 실패 시 로그인 화면으로 */ }

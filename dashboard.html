@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- make_site 1.0 · 2026-10-19 11:26 -->
+<!-- make_site 1.0 · 2026-10-23 10:40 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>빅분기 테스트 · 고사장 통합 현황판</title>
+<title>ADsP_20261023 · 고사장 통합 현황판</title>
 <style>
   :root {
     --bg: #F5F6F8; --surface: #FFFFFF; --ink: #1B2231; --ink-soft: #5A6376; --ink-faint: #8A92A3;
@@ -122,7 +122,7 @@
 <div class="page">
   <div class="head">
     <div>
-      <h1>고사장 통합 현황판 <span class="exam-chip">빅분기 테스트</span></h1>
+      <h1>고사장 통합 현황판 <span class="exam-chip">ADsP_20261023</span></h1>
       <div class="sub">고사장별 등록 진행 상황을 확인하고, 모두 끝나면 취합 엑셀을 받습니다</div>
       <span class="badge-int">자격운영팀 내부용 · 감독관에게 배포하지 마세요</span>
     </div>
@@ -159,14 +159,14 @@
   <div id="viewRef" style="display:none"></div>
 </div>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
-<div class="verbadge" id="ver">대시보드 v24.1</div>
+<div class="verbadge" id="ver">대시보드 v24.2</div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbyk_-opzmwxk8n7kfpaR5r21KDwCgd1MeTXYTjWGfS-sPr0QVePkhyT_u55qDYaY7Kr/exec";
-const EXAM_NAME = "빅분기 테스트";
-const RESET_PIN_HINT = "";   // 사이트만들기에서 넣은 PIN (비어 있으면 안내 없이 직접 입력)
+const GAS_URL = "https://script.google.com/macros/s/AKfycbyTOFuoKtAY_7fv40cgQU7X6RKHbVzFO6U--mEcpisifAhTdgw_KlXFp2-DYKPaWJTBtQ/exec";
+const EXAM_NAME = "ADsP_20261023";
+const RESET_PIN_HINT = "123456";   // 사이트만들기에서 넣은 PIN (비어 있으면 안내 없이 직접 입력)
 const DASH_VERSION = "v24";
-const DASH_BUILD = 1;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
+const DASH_BUILD = 2;           // 같은 v21 안에서 화면만 고친 횟수 (표시용)
 const XLSX_URLS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
   "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
@@ -439,6 +439,10 @@ function openReset(scope, venue) {
 /* ---------- 기준표 탭 ---------- */
 const CHANGELOG = [
  [
+  "v24.2",
+  "엑셀 원본(ADsP 형식)을 정리 없이 읽기 · 합계 줄 비교 · 총괄 고사장 선택 화면(서버 v24 그대로)"
+ ],
+ [
   "v24",
   "감독관 화면 완료 안내 창(눌러야 이동) · 기준표 탭 · 로그인 기록 · 초기화 작업자 기록·PIN 항상 표시 · 생성 정보(BUILD_META)"
  ],
@@ -481,24 +485,32 @@ const RULE_CARDS = [
   "title": "엑셀 입력 규칙",
   "rows": [
    [
-    "고사실 배치표",
-    "고사장·고사실·책상배열·접수 인원·수험번호. 접수 인원과 수험번호 수가 다르면 만들 때 경고"
+    "한 파일",
+    "엑셀 파일 하나에 '고사실현황판' 탭과 '본부감독' 탭을 함께 둔다 (파일 하나만 선택)"
    ],
    [
-    "본부감독 탭",
-    "열 이름으로 찾음: (지역)고사장 · 이름 · 휴대전화 · 역할"
-   ],
-   [
-    "총괄",
-    "역할에 '총괄'이 들어 있으면 총괄(예: 총괄본부). 모든 고사장 접근"
+    "고사실현황판",
+    "맨 위에 지역 제목·본부 요약표·예비 줄·합계가 있는 원본 그대로 읽는다. '고사실'·'수험번호'·'책상배열'이 함께 있는 줄을 헤더로 찾고, 책상배열이 N(A행 X B열) 형태이고 고사실 칸이 '예비'가 아닌 줄만 고사실로 인정한다 (예비·요약·합계·반복 헤더는 자동 제외). 정리한 형식(big_seat)도 그대로 읽힘"
    ],
    [
     "고사장 이름",
-    "'(지역)' 접두와 공백을 없애고 맞춤"
+    "'구분' 열의 이름을 쓰고 비어 있으면 위 줄 이름을 이어받는다. '(지역)' 접두와 공백은 없애 본부감독 탭과 맞춘다"
+   ],
+   [
+    "층",
+    "'강의실'(층) 열이 비어 있으면 고사실 이름만 표시(예: 1고사실)"
+   ],
+   [
+    "본부감독 탭",
+    "열 이름으로 찾음: (지역)고사장 · 이름 · 휴대전화 · 역할. 역할에 '총괄'이 있으면 총괄"
    ],
    [
     "전화번호",
     "숫자만 뽑아 010을 떼고 뒤 8자리. 빈칸은 로그인 불가(매핑에서 제외, 경고). 짧거나 010이 아닌 번호는 경고. 다른 고사장에 같은 8자리가 있으면 경고(첫 고사장으로만 들어감)"
+   ],
+   [
+    "만들 때 점검",
+    "엑셀 합계 줄과 읽은 접수 합 비교 · 접수와 수험번호 수 불일치 · 책상배열이 없어 건너뛴 고사실 · 두 탭의 고사장 이름 불일치(감독관 없는 고사장/좌석 없는 감독관 고사장) → 경고가 0곳이 될 때까지 맞춘다"
    ],
    [
     "큰 시험",
@@ -544,7 +556,7 @@ const RULE_CARDS = [
    ],
    [
     "총괄",
-    "같은 방식으로 로그인하면 맨 위 고사장 선택창으로 모든 고사장 이동. 새로고침하면 엑셀에 적힌 본인 고사장으로 복귀"
+    "같은 방식으로 로그인하면 먼저 '고사장 선택' 화면(검색칸·진행 상태)이 뜨고, 고사장을 눌러야 입장. 엑셀에 적힌 소속 고사장으로 바로 들어가지 않음. 입장 후에도 '고사장 변경' 버튼으로 선택 화면으로 돌아옴. 새로고침하면 선택 화면부터"
    ],
    [
     "대시보드",
@@ -740,7 +752,7 @@ const RULE_CARDS = [
    ],
    [
     "엑셀 점검 후보",
-    "수험번호 범위 겹침 · 책상배열 이상값 · 건너뛴 행"
+    "수험번호 범위 겹침 · 책상배열 이상값 (합계 비교·건너뛴 줄 경고는 반영됨)"
    ],
    [
     "미정",
